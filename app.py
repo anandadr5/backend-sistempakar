@@ -9,13 +9,13 @@ from sqlalchemy import func
 from fuzzy import fuzzy_diagnosis
 from utils import calculate_bmi, get_bmi_category
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 # Konfigurasi CORS
 frontend_url = os.environ.get('FRONTEND_URL', "https://frontend-sistempakar.vercel.app/")
 CORS(app, resources={r"/api/*": {"origins": frontend_url}})
 
-# Konfigurasi Database dari Environment Variable
+# Konfigurasi Database
 DATABASE_URL_FROM_ENV = os.environ.get('DATABASE_URL')
 if DATABASE_URL_FROM_ENV:
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL_FROM_ENV.replace("mysql://", "mysql+pymysql://", 1)
@@ -24,7 +24,7 @@ else:
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Konfigurasi Secret Key dari Environment Variable
+# Konfigurasi Secret Key
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_dev_secret_key_please_change_in_prod')
 
 db = SQLAlchemy(app)
@@ -217,6 +217,6 @@ def delete_feedback(id):
 
 # RUN APP
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     local_port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, port=local_port)
+    app.run(host='0.0.0.0', port=local_port)
