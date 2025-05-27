@@ -297,13 +297,11 @@ def init_db():
     except Exception as e:
         print(f"Error creating database tables: {e}")
 
-# RUN APP
+# Inisialisasi database saat aplikasi dimuat
+init_db()
 
+# RUN APP
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
-else:
-    # Untuk production (Railway)
-    init_db()
