@@ -9,13 +9,13 @@ from sqlalchemy import func
 from fuzzy import fuzzy_diagnosis
 from utils import calculate_bmi, get_bmi_category
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 # Konfigurasi CORS
 frontend_url = os.environ.get('FRONTEND_URL', "https://frontend-sistempakar.vercel.app/")
 CORS(app, resources={r"/api/*": {"origins": frontend_url}})
 
-# Konfigurasi Database dari Environment Variable
+# Konfigurasi Database
 DATABASE_URL_FROM_ENV = os.environ.get('DATABASE_URL')
 if DATABASE_URL_FROM_ENV:
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL_FROM_ENV.replace("mysql://", "mysql+pymysql://", 1)
@@ -24,15 +24,22 @@ else:
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Konfigurasi Secret Key dari Environment Variable
+# Konfigurasi Secret Key
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_dev_secret_key_please_change_in_prod')
+app.logger.info(f"INFO: Secret key configured.")
 
-db = SQLAlchemy(app)
+app.logger.info("INFO: Initializing SQLAlchemy...")
+try:
+    db = SQLAlchemy(app)
+    app.logger.info("INFO: SQLAlchemy initialized.")
+except Exception as e:
+    app.logger.error(f"ERROR: Failed during SQLAlchemy initialization: {e}", exc_info=True)
+    raise
 
 # MODEL
 
 class Diagnosa(db.Model):
-    _tablename_ = 'diagnosa'
+    __tablename__ = 'diagnosa'
 
     id = db.Column(db.Integer, primary_key=True)
     nama = db.Column(db.String(100))
@@ -50,7 +57,7 @@ class Diagnosa(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Feedback(db.Model):
-    _tablename_ = 'feedback'
+    __tablename__ = 'feedback'
 
     id = db.Column(db.Integer, primary_key=True)
     nama = db.Column(db.String(100))
@@ -58,8 +65,21 @@ class Feedback(db.Model):
     pesan = db.Column(db.Text)
 
 # Inisialisasi Database
-with app.app_context():
-    db.create_all()
+app.logger.info("INFO: Attempting to create all tables with app_context...")
+try:
+    with app.app_context():
+        db.create_all()
+    app.logger.info("INFO: db.create_all() completed successfully or tables already exist.")
+except Exception as e:
+    app.logger.error(f"ERROR: Failed during db.create_all(): {e}", exc_info=True)
+    raise
+
+app.logger.info("INFO: Application initialization finished. Routes will be defined now.")
+
+@app.route('/')
+def health_check():
+    app.logger.info("INFO: Health check route / called successfully.")
+    return "Backend is healthy and running!", 200
 
 # ENDPOINT DIAGNOSIS
 
@@ -217,6 +237,6 @@ def delete_feedback(id):
 
 # RUN APP
 
-if _name_ == '_main_':
+if __name__ == '_main_':
     local_port = int(os.environ.get('PORT', 5000))
     app.run(debug=True, port=local_port)
