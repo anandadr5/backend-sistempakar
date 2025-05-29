@@ -230,7 +230,8 @@ def delete_data(id):
 def create_feedback():
     try:
         data = request.get_json()
-        
+        print("✅ DITERIMA:", data)
+
         if not data:
             return jsonify({"error": "No data provided"}), 400
             
@@ -255,6 +256,7 @@ def get_feedback():
         return jsonify(result)
     
     except Exception as e:
+        print("❌ ERROR:", str(e))
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/feedback/<int:id>", methods=["DELETE"])
@@ -293,6 +295,6 @@ init_db()
 
 # RUN APP
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', '8080'))
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
