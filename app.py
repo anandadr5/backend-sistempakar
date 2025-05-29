@@ -69,11 +69,11 @@ class Feedback(db.Model):
 # Health check endpoint
 @app.route("/api/health", methods=["GET"])
 def health_check():
-    return jsonify({"status": "API is running", "timestamp": datetime.utcnow().isoformat()})
-
-@app.route("/api/health", methods=["GET"])
-def api_health():
-    return jsonify({"status": "healthy", "database": "connected"})
+    return jsonify({
+        "status": "API is running",
+        "database": "connected",
+        "timestamp": datetime.utcnow().isoformat()
+    })
 
 # ENDPOINT DIAGNOSIS
 
