@@ -67,7 +67,7 @@ class Feedback(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Health check endpoint
-@app.route("/health", methods=["GET"])
+@app.route("/api/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "API is running", "timestamp": datetime.utcnow().isoformat()})
 
