@@ -13,7 +13,7 @@ app = Flask(__name__)
 
 # Konfigurasi CORS
 frontend_url = os.environ.get('FRONTEND_URL', "https://frontend-sistempakar.vercel.app")
-CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:3000"]}})
+CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:5173"]}})
 
 # Konfigurasi Database
 DATABASE_URL_FROM_ENV = os.environ.get('DATABASE_URL')
