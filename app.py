@@ -18,12 +18,10 @@ CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:517
 # Konfigurasi Database
 DATABASE_URL_FROM_ENV = os.environ.get('DATABASE_URL')
 if DATABASE_URL_FROM_ENV:
-    # Handle Railway's MySQL URL format
     if DATABASE_URL_FROM_ENV.startswith("mysql://"):
         DATABASE_URL_FROM_ENV = DATABASE_URL_FROM_ENV.replace("mysql://", "mysql+pymysql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL_FROM_ENV
 else:
-    # Fallback untuk development lokal
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/db_sistempakar'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -84,7 +82,7 @@ def diagnosis():
 
         name = data["nama"]
         age = int(data["usia"])
-        gender_str = data["gender"]  # "Laki-laki" atau "Perempuan"
+        gender_str = data["gender"]
         weight = float(data["weight"])
         height = float(data["height"])
         symptoms = data["gejala"]
