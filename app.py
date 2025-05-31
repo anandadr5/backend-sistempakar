@@ -1,5 +1,4 @@
 import os
-import bleach
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -19,10 +18,12 @@ CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:517
 # Konfigurasi Database
 DATABASE_URL_FROM_ENV = os.environ.get('DATABASE_URL')
 if DATABASE_URL_FROM_ENV:
+    # Handle Railway's MySQL URL format
     if DATABASE_URL_FROM_ENV.startswith("mysql://"):
         DATABASE_URL_FROM_ENV = DATABASE_URL_FROM_ENV.replace("mysql://", "mysql+pymysql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL_FROM_ENV
 else:
+    # Fallback untuk development lokal
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/db_sistempakar'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -81,9 +82,9 @@ def diagnosis():
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
 
-        name = bleach.clean(data["nama"])
+        name = data["nama"]
         age = int(data["usia"])
-        gender_str = bleach.clean(data["gender"])
+        gender_str = data["gender"]  # "Laki-laki" atau "Perempuan"
         weight = float(data["weight"])
         height = float(data["height"])
         symptoms = data["gejala"]
@@ -92,10 +93,9 @@ def diagnosis():
 
         bmi = calculate_bmi(weight, height / 100)
         kategori_bmi = get_bmi_category(bmi)
-        clean_symptoms = {bleach.clean(k): bleach.clean(v) for k, v in symptoms.items()}
-        diagnosis_result, percentage, risiko, saran = fuzzy_diagnosis(age, gender, bmi, clean_symptoms)
+        diagnosis_result, percentage, risiko, saran = fuzzy_diagnosis(age, gender, bmi, symptoms)
 
-        gejala_aktif = [bleach.clean(key) for key, val in clean_symptoms.items() if val.lower() == "ya"]
+        gejala_aktif = [key for key, val in symptoms.items() if val.lower() == "ya"]
         gejala_aktif_display = ", ".join(gejala_aktif) if gejala_aktif else "Tidak ada gejala yang dipilih"
 
         diagnosa = Diagnosa(
@@ -240,11 +240,7 @@ def create_feedback():
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
         
-        nama = bleach.clean(data["nama"])
-        email = bleach.clean(data["email"])
-        pesan = bleach.clean(data["pesan"], strip=True)
-
-        feedback = Feedback(nama=nama, email=email, pesan=pesan)
+        feedback = Feedback(nama=data["nama"], email=data["email"], pesan=data["pesan"])
         db.session.add(feedback)
         db.session.commit()
         return jsonify({"message": "Feedback berhasil disimpan"})
