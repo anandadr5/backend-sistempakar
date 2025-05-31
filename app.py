@@ -240,7 +240,11 @@ def create_feedback():
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
         
-        feedback = Feedback(nama=bleach.clean(data["nama"]), email=bleach.clean(data["email"]), pesan=bleach.clean(data["pesan"]))
+        nama = bleach.clean(data["nama"])
+        email = bleach.clean(data["email"])
+        pesan = bleach.clean(data["pesan"], strip=True)
+
+        feedback = Feedback(nama=nama, email=email, pesan=pesan)
         db.session.add(feedback)
         db.session.commit()
         return jsonify({"message": "Feedback berhasil disimpan"})
