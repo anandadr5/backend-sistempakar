@@ -201,7 +201,8 @@ def get_diagnosis_detail(id):
                 "persentase": data.persentase,
                 "risiko": data.risiko,
                 "saran": data.saran,
-                "gejala": data.gejala
+                "gejala": data.gejala,
+                "created_at": data.created_at.strftime("%Y-%m-%d %H:%M:%S")
             }
             return jsonify(result)
         return jsonify({"message": "Data tidak ditemukan"}), 404
