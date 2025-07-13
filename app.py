@@ -126,7 +126,8 @@ def diagnosis():
             "persentase": percentage,
             "risiko": risiko,
             "gejala": gejala_aktif_display,
-            "saran": saran
+            "saran": saran,
+            "created_at": diagnosa.created_at.strftime("%Y-%m-%d %H:%M:%S")
         })
     
     except Exception as e:
