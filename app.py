@@ -175,8 +175,7 @@ def get_all_diagnosis():
                 "nama": d.nama,
                 "usia": d.usia,
                 "jenis_kelamin": d.jenis_kelamin,
-                "diagnosis": d.diagnosis,
-                "created_at": d.created_at.isoformat() if d.created_at else None
+                "diagnosis": d.diagnosis
             } for d in data
         ]
         return jsonify(result)
@@ -202,8 +201,7 @@ def get_diagnosis_detail(id):
                 "persentase": data.persentase,
                 "risiko": data.risiko,
                 "saran": data.saran,
-                "gejala": data.gejala,
-                "created_at": data.created_at.isoformat() if data.created_at else None
+                "gejala": data.gejala
             }
             return jsonify(result)
         return jsonify({"message": "Data tidak ditemukan"}), 404
