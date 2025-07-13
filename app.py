@@ -126,8 +126,7 @@ def diagnosis():
             "persentase": percentage,
             "risiko": risiko,
             "gejala": gejala_aktif_display,
-            "saran": saran,
-            "created_at": diagnosa.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            "saran": saran
         })
     
     except Exception as e:
@@ -176,7 +175,8 @@ def get_all_diagnosis():
                 "nama": d.nama,
                 "usia": d.usia,
                 "jenis_kelamin": d.jenis_kelamin,
-                "diagnosis": d.diagnosis
+                "diagnosis": d.diagnosis,
+                "created_at": d.created_at.strftime('%d-%m-%Y %H:%M:%S') if d.created_at else None
             } for d in data
         ]
         return jsonify(result)
@@ -203,7 +203,7 @@ def get_diagnosis_detail(id):
                 "risiko": data.risiko,
                 "saran": data.saran,
                 "gejala": data.gejala,
-                "created_at": data.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                "created_at": data.created_at.strftime('%d-%m-%Y %H:%M:%S') if data.created_at else None
             }
             return jsonify(result)
         return jsonify({"message": "Data tidak ditemukan"}), 404
