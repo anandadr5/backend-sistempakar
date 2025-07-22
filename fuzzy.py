@@ -117,7 +117,7 @@ def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy):
         if rule12 > 0.1:
             rules.append(('rendah', rule12))
 
-    # Jika semua gejala aktif → Risiko Tinggi
+    # Rule 13: Jika semua gejala aktif → Risiko Tinggi
     if total_gejala >= 7:
         ruleX = min(1.0, total_gejala / 8)
         rules.append(('tinggi', ruleX))
