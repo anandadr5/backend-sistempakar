@@ -21,14 +21,14 @@ def fuzzifikasi_bmi(bmi):
     }
 
 GEJALA_WEIGHTS = {
-    'nyeri_dada': 0.9,
-    'sesak_napas': 0.85,
-    'pusing': 0.4,
+    'nyeri_dada': 1.0,
+    'sesak_napas': 1.0,
+    'jantung_berdebar': 0.95,
+    'keringat_dingin': 0.95,
+    'bengkak_kaki': 0.8,
+    'mudah_lelah': 0.7,
     'lemas': 0.5,
-    'jantung_berdebar': 0.75,
-    'mudah_lelah': 0.6,
-    'bengkak_kaki': 0.7,
-    'keringat_dingin': 0.8
+    'pusing': 0.4
 }
 
 def fuzzifikasi_gejala(symptoms):
@@ -116,6 +116,12 @@ def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy):
         rule12 = min(usia_muda, bmi_fuzzy['normal'], gejala_fuzzy['nyeri_dada'])
         if rule12 > 0.1:
             rules.append(('rendah', rule12))
+
+    # Jika semua gejala aktif → Risiko Tinggi
+    if total_gejala >= 7:
+        ruleX = min(1.0, total_gejala / 8)
+        rules.append(('tinggi', ruleX))
+
 
     # Kriteria "tidak terdeteksi" untuk gejala ringan + usia normal + BMI normal/overweight
     if len(rules) == 0:
