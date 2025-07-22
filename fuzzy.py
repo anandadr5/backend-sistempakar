@@ -48,75 +48,90 @@ def fuzzifikasi_gejala(symptoms):
     return fuzzy_weighted
 
 def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy):
-    # Inferensi Mamdani
     rules = []
     total_gejala = sum(gejala_fuzzy.values())
+    gejala_berat = max(
+        gejala_fuzzy['nyeri_dada'],
+        gejala_fuzzy['sesak_napas'],
+        gejala_fuzzy['jantung_berdebar'],
+        gejala_fuzzy['keringat_dingin']
+    )
 
+    # Tidak ada gejala sama sekali
     if total_gejala == 0:
-        return rules
+        return [('tidak_terdeteksi', 1.0)]
 
-    gejala_ringan_saja = ['pusing', 'lemas', 'mudah_lelah']
-    gejala_aktif = [k for k, v in gejala_fuzzy.items() if v > 0]
-
-    if (total_gejala == 1 and
-        any(gejala in gejala_aktif for gejala in gejala_ringan_saja) and
-        max(age_fuzzy['remaja'], age_fuzzy['dewasa']) > 0.5 and
-        max(bmi_fuzzy['normal'], bmi_fuzzy['underweight']) > 0.5):
-        return rules  # Tidak terdeteksi
-
-    # Rule 1: Lansia + nyeri dada atau sesak napas → risiko tinggi
-    rule1 = min(age_fuzzy['lansia'], max(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['sesak_napas']))
+    # Rule 1: Lansia + nyeri dada → Risiko Tinggi
+    rule1 = min(age_fuzzy['lansia'], gejala_fuzzy['nyeri_dada'])
     if rule1 > 0.1: rules.append(('tinggi', rule1))
 
-    # Rule 2: Obese + nyeri dada + sesak napas → risiko tinggi
-    rule2 = min(bmi_fuzzy['obese'], gejala_fuzzy['nyeri_dada'], gejala_fuzzy['sesak_napas'])
+    # Rule 2: Nyeri dada + keringat dingin + sesak napas → Risiko Tinggi
+    rule2 = min(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['keringat_dingin'], gejala_fuzzy['sesak_napas'])
     if rule2 > 0.1: rules.append(('tinggi', rule2))
 
-    # Rule 3: Nyeri dada + jantung berdebar + keringat dingin → risiko tinggi
-    rule3 = min(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['jantung_berdebar'], gejala_fuzzy['keringat_dingin'])
+    # Rule 3: Obesitas + bengkak kaki + mudah lelah → Risiko Tinggi
+    rule3 = min(bmi_fuzzy['obese'], gejala_fuzzy['bengkak_kaki'], gejala_fuzzy['mudah_lelah'])
     if rule3 > 0.1: rules.append(('tinggi', rule3))
 
-    # Rule 4: Gejala ≥ 5 → risiko tinggi
-    if total_gejala >= 5:
-        rule4 = min(1.0, total_gejala / 8)
-        rules.append(('tinggi', rule4))
+    # Rule 4: Nyeri dada + jantung berdebar + sesak napas → Risiko Tinggi
+    rule4 = min(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['jantung_berdebar'], gejala_fuzzy['sesak_napas'])
+    if rule4 > 0.1: rules.append(('tinggi', rule4))
 
-    # Rule 5: Dewasa + overweight + mudah lelah atau bengkak kaki → risiko sedang
-    rule5 = min(age_fuzzy['dewasa'], bmi_fuzzy['overweight'],
-                max(gejala_fuzzy['mudah_lelah'], gejala_fuzzy['bengkak_kaki']))
-    if rule5 > 0.1: rules.append(('sedang', rule5))
+    # Rule 5: Bayi/anak + keringat dingin + sesak napas → Risiko Tinggi
+    usia_kecil = max(age_fuzzy['bayi'], age_fuzzy['anak'])
+    rule5 = min(usia_kecil, gejala_fuzzy['keringat_dingin'], gejala_fuzzy['sesak_napas'])
+    if rule5 > 0.1: rules.append(('tinggi', rule5))
 
-    # Rule 6: Sesak napas + mudah lelah + pusing → risiko sedang
-    rule6 = min(gejala_fuzzy['sesak_napas'], gejala_fuzzy['mudah_lelah'], gejala_fuzzy['pusing'])
+    # Rule 6: Dewasa + overweight/obese + mudah lelah → Risiko Sedang
+    rule6 = min(age_fuzzy['dewasa'], max(bmi_fuzzy['overweight'], bmi_fuzzy['obese']), gejala_fuzzy['mudah_lelah'])
     if rule6 > 0.1: rules.append(('sedang', rule6))
 
-    # Rule 7: Keringat dingin + jantung berdebar tanpa nyeri dada → risiko sedang
-    rule7 = min(gejala_fuzzy['keringat_dingin'], gejala_fuzzy['jantung_berdebar'],
-                1 - gejala_fuzzy['nyeri_dada'])
+    # Rule 7: Nyeri dada ringan + jantung berdebar tanpa keringat dingin → Risiko Sedang
+    rule7 = min(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['jantung_berdebar'], 1 - gejala_fuzzy['keringat_dingin'])
     if rule7 > 0.1: rules.append(('sedang', rule7))
 
-    # Rule 8: Remaja/dewasa + BMI normal + gejala ringan (tanpa nyeri dada/sesak napas) → risiko rendah
-    usia_muda_dewasa = max(age_fuzzy['remaja'], age_fuzzy['dewasa'])
-    gejala_ringan = max(gejala_fuzzy['pusing'], gejala_fuzzy['lemas'], gejala_fuzzy['mudah_lelah'])
-    rule8 = min(usia_muda_dewasa, bmi_fuzzy['normal'], gejala_ringan)
-    if rule8 > 0.1 and gejala_fuzzy['nyeri_dada'] == 0 and gejala_fuzzy['sesak_napas'] == 0 and total_gejala >= 2:
-        rules.append(('rendah', rule8))
+    # Rule 8: Sesak napas + mudah lelah + BMI tinggi → Risiko Sedang
+    rule8 = min(gejala_fuzzy['sesak_napas'], gejala_fuzzy['mudah_lelah'], max(bmi_fuzzy['overweight'], bmi_fuzzy['obese']))
+    if rule8 > 0.1: rules.append(('sedang', rule8))
 
-    gejala_berat = max(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['sesak_napas'],
-                       gejala_fuzzy['jantung_berdebar'], gejala_fuzzy['keringat_dingin'])
+    # Rule 9: ≥4 gejala aktif tanpa nyeri dada → Risiko Sedang
+    if total_gejala >= 4 and gejala_fuzzy['nyeri_dada'] == 0:
+        rule9 = min(0.9, total_gejala / 8)
+        rules.append(('sedang', rule9))
 
-    # Rule 9: 2-3 gejala ringan tanpa gejala berat → risiko rendah
+    # Rule 10: Usia remaja/dewasa + BMI normal + gejala ringan → Risiko Rendah
+    gejala_ringan = max(gejala_fuzzy['lemas'], gejala_fuzzy['pusing'], gejala_fuzzy['mudah_lelah'])
+    rule10 = min(max(age_fuzzy['remaja'], age_fuzzy['dewasa']), bmi_fuzzy['normal'], gejala_ringan)
+    if rule10 > 0.1 and gejala_berat == 0:
+        rules.append(('rendah', rule10))
+
+    # Rule 11: 2–3 gejala ringan tanpa gejala berat → Risiko Rendah
     if 2 <= total_gejala <= 3 and gejala_berat == 0:
-        rule9 = min(0.7, total_gejala / 8)
-        rules.append(('rendah', rule9))
+        rule11 = min(0.7, total_gejala / 8)
+        rules.append(('rendah', rule11))
 
-    # Rule 10: Bayi/anak + gejala berat → risiko tinggi
-    usia_anak = max(age_fuzzy['bayi'], age_fuzzy['anak'])
-    if usia_anak > 0.1 and gejala_berat > 0:
-        rule10 = min(usia_anak, gejala_berat)
-        rules.append(('tinggi', rule10))
+    # Rule 12: Nyeri dada tunggal pada usia muda dan BMI normal → Risiko Rendah
+    if gejala_fuzzy['nyeri_dada'] > 0 and total_gejala == 1:
+        usia_muda = max(age_fuzzy['remaja'], age_fuzzy['dewasa'])
+        rule12 = min(usia_muda, bmi_fuzzy['normal'], gejala_fuzzy['nyeri_dada'])
+        if rule12 > 0.1:
+            rules.append(('rendah', rule12))
+
+    # Kriteria "tidak terdeteksi" untuk gejala ringan + usia normal + BMI normal/overweight
+    if len(rules) == 0:
+        gejala_ringan_only = (
+            gejala_berat == 0 and
+            max(gejala_fuzzy['lemas'], gejala_fuzzy['pusing'], gejala_fuzzy['mudah_lelah']) > 0 and
+            max(age_fuzzy['remaja'], age_fuzzy['dewasa']) > 0 and
+            max(bmi_fuzzy['normal'], bmi_fuzzy['overweight']) > 0
+        )
+        if gejala_ringan_only:
+            rules.append(('tidak_terdeteksi', 1.0))
+        else:
+            rules.append(('tidak_terdeteksi', 1.0))  # fallback
 
     return rules
+
 
 def agregasi_output(rules):
     # Agregasi output
