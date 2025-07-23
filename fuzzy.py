@@ -60,6 +60,10 @@ def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy):
     # Tidak ada gejala sama sekali
     if total_gejala == 0:
         return [('tidak_terdeteksi', 1.0)]
+    
+    # Rule 13: Jika semua gejala aktif → Risiko Tinggi
+    if total_gejala >= 7:
+        return [('tinggi', 1.0)]
 
     # Rule 1: Lansia + nyeri dada → Risiko Tinggi
     rule1 = min(age_fuzzy['lansia'], gejala_fuzzy['nyeri_dada'])
@@ -116,12 +120,6 @@ def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy):
         rule12 = min(usia_muda, bmi_fuzzy['normal'], gejala_fuzzy['nyeri_dada'])
         if rule12 > 0.1:
             rules.append(('rendah', rule12))
-
-    # Rule 13: Jika semua gejala aktif → Risiko Tinggi
-    if total_gejala >= 7:
-        ruleX = min(1.0, total_gejala / 8)
-        rules.append(('tinggi', ruleX))
-
 
     # Kriteria "tidak terdeteksi" untuk gejala ringan + usia normal + BMI normal/overweight
     if len(rules) == 0:
