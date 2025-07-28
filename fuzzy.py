@@ -45,9 +45,9 @@ def fuzzifikasi_gejala(symptoms):
         'keringat_dingin': 1.0 if symptoms_norm.get("keringat dingin", "tidak") == "ya" else 0.0
     }
     fuzzy_weighted = {key: base_fuzzy[key] * GEJALA_WEIGHTS[key] for key in base_fuzzy}
-    return fuzzy_weighted
+    return fuzzy_weighted, base_fuzzy
 
-def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy):
+def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy, gejala_base):
     rules = []
     total_gejala = sum(gejala_fuzzy.values())
     gejala_berat = max(
@@ -56,7 +56,7 @@ def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy):
         gejala_fuzzy['jantung_berdebar'],
         gejala_fuzzy['keringat_dingin']
     )
-    jumlah_gejala_aktif = sum(1 for value in gejala_fuzzy.values() if value > 0)
+    jumlah_gejala_aktif = sum(1 for value in gejala_base.values() if value > 0)
 
     # Rule 13: Jika 7-8 gejala aktif → Risiko Tinggi
     if jumlah_gejala_aktif >= 7:
@@ -169,10 +169,10 @@ def fuzzy_diagnosis(age, gender, bmi, symptoms):
     # Fuzzifikasi
     age_fuzzy = fuzzifikasi_usia(age)
     bmi_fuzzy = fuzzifikasi_bmi(bmi)
-    gejala_fuzzy = fuzzifikasi_gejala(symptoms)
+    gejala_fuzzy, gejala_base = fuzzifikasi_gejala(symptoms)
 
     # Inferensi
-    rules_output = inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy)
+    rules_output = inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy, gejala_base)
 
     # Agregasi
     aggregated = agregasi_output(rules_output)
@@ -190,13 +190,13 @@ def fuzzy_diagnosis_debug(age, gender, bmi, symptoms):
     print_debug_info("Fuzzifikasi usia", "")
     age_fuzzy = fuzzifikasi_usia(age)
     bmi_fuzzy = fuzzifikasi_bmi(bmi)
-    gejala_fuzzy = fuzzifikasi_gejala(symptoms)
+    gejala_fuzzy, gejala_base = fuzzifikasi_gejala(symptoms)
     print(f"Usia {age} -> {age_fuzzy}")
     print(f"BMI {bmi} -> {bmi_fuzzy}")
     print(f"Gejala aktif: {get_active_symptoms(gejala_fuzzy)}")
 
     print_debug_info("Inferensi Mamdani", "")
-    rules_output = inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy)
+    rules_output = inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy, gejala_base)
     print(f"Rules aktif: {rules_output}")
 
     print_debug_info("Agregasi output", "")
