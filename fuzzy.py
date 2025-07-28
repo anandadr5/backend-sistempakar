@@ -58,9 +58,15 @@ def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy, gejala_base):
     )
     jumlah_gejala_aktif = sum(1 for value in gejala_base.values() if value > 0)
 
+    # DEBUG: Print untuk checking
+    print(f"DEBUG - gejala_base: {gejala_base}")
+    print(f"DEBUG - jumlah_gejala_aktif: {jumlah_gejala_aktif}")
+    print(f"DEBUG - total_gejala: {total_gejala}")
+    
     # Rule 13: Jika 7-8 gejala aktif → Risiko Tinggi
     if jumlah_gejala_aktif >= 7:
-        rules.append [('tinggi', 1.0)]
+        print("DEBUG - Rule 13 TERPICU!")
+        return [('tinggi', 1.0)]
 
     # Tidak ada gejala sama sekali
     if jumlah_gejala_aktif == 0:
