@@ -1,5 +1,5 @@
 import numpy as np
-from utils import gaussian_membership, normalize_symptoms, get_active_symptoms, format_diagnosis_result, print_debug_info
+from utils import gaussian_membership, get_active_symptoms, format_diagnosis_result, print_debug_info
 
 def fuzzifikasi_usia(age):
     # Fuzzifikasi usia
@@ -33,17 +33,23 @@ GEJALA_WEIGHTS = {
 
 def fuzzifikasi_gejala(symptoms):
     # Fuzzifikasi gejala
-    symptoms_norm = normalize_symptoms(symptoms)
+    print(f"🔍 DEBUG - Raw symptoms input: {symptoms}")
+    print(f"🔍 DEBUG - Type: {type(symptoms)}")
+
     base_fuzzy = {
-        'nyeri_dada': 1.0 if symptoms_norm.get("nyeri dada", "tidak") == "ya" else 0.0,
-        'sesak_napas': 1.0 if symptoms_norm.get("sesak napas", "tidak") == "ya" else 0.0,
-        'pusing': 1.0 if symptoms_norm.get("pusing", "tidak") == "ya" else 0.0,
-        'lemas': 1.0 if symptoms_norm.get("lemas", "tidak") == "ya" else 0.0,
-        'jantung_berdebar': 1.0 if symptoms_norm.get("jantung berdebar", "tidak") == "ya" else 0.0,
-        'mudah_lelah': 1.0 if symptoms_norm.get("mudah lelah", "tidak") == "ya" else 0.0,
-        'bengkak_kaki': 1.0 if symptoms_norm.get("bengkak pada kaki", "tidak") == "ya" else 0.0,
-        'keringat_dingin': 1.0 if symptoms_norm.get("keringat dingin", "tidak") == "ya" else 0.0
+        'nyeri_dada': 1.0 if symptoms.get("nyeri dada", "tidak") == "ya" else 0.0,
+        'sesak_napas': 1.0 if symptoms.get("sesak napas", "tidak") == "ya" else 0.0,
+        'pusing': 1.0 if symptoms.get("pusing", "tidak") == "ya" else 0.0,
+        'lemas': 1.0 if symptoms.get("lemas", "tidak") == "ya" else 0.0,
+        'jantung_berdebar': 1.0 if symptoms.get("jantung berdebar", "tidak") == "ya" else 0.0,
+        'mudah_lelah': 1.0 if symptoms.get("mudah lelah", "tidak") == "ya" else 0.0,
+        'bengkak_kaki': 1.0 if symptoms.get("bengkak pada kaki", "tidak") == "ya" else 0.0,
+        'keringat_dingin': 1.0 if symptoms.get("keringat dingin", "tidak") == "ya" else 0.0
     }
+
+    print(f"🔍 DEBUG - base_fuzzy result: {base_fuzzy}")
+    print(f"🔍 DEBUG - jumlah gejala aktif: {sum(1 for v in base_fuzzy.values() if v > 0)}")
+
     fuzzy_weighted = {key: base_fuzzy[key] * GEJALA_WEIGHTS[key] for key in base_fuzzy}
     return fuzzy_weighted, base_fuzzy
 
