@@ -198,6 +198,9 @@ def defuzzifikasi_centroid(aggregated):
 
 def fuzzy_diagnosis(age, gender, bmi, symptoms):
     # Fuzzifikasi
+    age = int(age)
+    bmi = float(bmi)
+
     age_fuzzy = fuzzifikasi_usia(age)
     bmi_fuzzy = fuzzifikasi_bmi(bmi)
     gejala_fuzzy, gejala_base = fuzzifikasi_gejala(symptoms)

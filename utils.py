@@ -1,7 +1,9 @@
 import math
 
 def calculate_bmi(weight, height):
-    """Menghitung BMI dari berat badan dan tinggi badan"""
+    """Menghitung BMI dari berat badan (kg) dan tinggi badan (cm)"""
+    weight = float(weight)
+    height = float(height) / 100
     return round(weight / (height ** 2), 2)
 
 def get_bmi_category(bmi):
