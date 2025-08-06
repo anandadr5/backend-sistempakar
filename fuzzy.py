@@ -1,6 +1,19 @@
 import numpy as np
 from utils import gaussian_membership, get_active_symptoms, format_diagnosis_result, print_debug_info
 
+def normalize_symptom_keys(symptoms):
+    return {
+        key.lower().replace(" ", "_"): value.lower()
+        for key, value in symptoms.items()
+    }
+
+def convert_string_to_symptom_dict(gejala_str):
+    return {
+        symptom.strip(): "ya"
+        for symptom in gejala_str.split(",")
+        if symptom.strip()
+    }
+
 def fuzzifikasi_usia(age):
     # Fuzzifikasi usia
     return {
@@ -33,18 +46,24 @@ GEJALA_WEIGHTS = {
 
 def fuzzifikasi_gejala(symptoms):
     # Fuzzifikasi gejala
-    print(f"🔍 DEBUG - Raw symptoms input: {symptoms}")
-    print(f"🔍 DEBUG - Type: {type(symptoms)}")
+    # Jika input berupa string, ubah ke dictionary
+    if isinstance(symptoms, str):
+        symptoms = convert_string_to_symptom_dict(symptoms)
+
+    # Normalisasi key
+    symptoms = normalize_symptom_keys(symptoms)
+
+    print(f"🔍 DEBUG - Normalized symptoms input: {symptoms}")
 
     base_fuzzy = {
-        'nyeri_dada': 1.0 if symptoms.get("nyeri dada", "tidak") == "ya" else 0.0,
-        'sesak_napas': 1.0 if symptoms.get("sesak napas", "tidak") == "ya" else 0.0,
+        'nyeri_dada': 1.0 if symptoms.get("nyeri_dada", "tidak") == "ya" else 0.0,
+        'sesak_napas': 1.0 if symptoms.get("sesak_napas", "tidak") == "ya" else 0.0,
         'pusing': 1.0 if symptoms.get("pusing", "tidak") == "ya" else 0.0,
         'lemas': 1.0 if symptoms.get("lemas", "tidak") == "ya" else 0.0,
-        'jantung_berdebar': 1.0 if symptoms.get("jantung berdebar", "tidak") == "ya" else 0.0,
-        'mudah_lelah': 1.0 if symptoms.get("mudah lelah", "tidak") == "ya" else 0.0,
-        'bengkak_kaki': 1.0 if symptoms.get("bengkak pada kaki", "tidak") == "ya" else 0.0,
-        'keringat_dingin': 1.0 if symptoms.get("keringat dingin", "tidak") == "ya" else 0.0
+        'jantung_berdebar': 1.0 if symptoms.get("jantung_berdebar", "tidak") == "ya" else 0.0,
+        'mudah_lelah': 1.0 if symptoms.get("mudah_lelah", "tidak") == "ya" else 0.0,
+        'bengkak_kaki': 1.0 if symptoms.get("bengkak_kaki", "tidak") == "ya" else 0.0,
+        'keringat_dingin': 1.0 if symptoms.get("keringat_dingin", "tidak") == "ya" else 0.0
     }
 
     print(f"🔍 DEBUG - base_fuzzy result: {base_fuzzy}")
