@@ -242,10 +242,12 @@ def fuzzy_diagnosis_debug(age, gender, bmi, symptoms):
     print(f"Centroid: {centroid_score}")
 
     print_debug_info("Hasil akhir diagnosis", "")
-    diagnosis, result_score, risiko, saran = fuzzy_diagnosis(age, gender, bmi, symptoms)
-    print(f"Diagnosis: {diagnosis}")
+    result = format_diagnosis_result(centroid_score)
+    result_score = round(centroid_score, 2)
+    print(f"Diagnosis: {result['diagnosis']}")
     print(f"Skor: {result_score}%")
-    print(f"Risiko: {risiko}")
-    print(f"Saran: {saran}")
+    print(f"Risiko: {result['risiko']}")
+    print(f"Saran: {result['saran']}")
 
-    return diagnosis, result_score, risiko, saran
+    return result['diagnosis'], result_score, result['risiko'], result['saran']
+
