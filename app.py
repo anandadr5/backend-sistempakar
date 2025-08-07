@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -5,9 +8,10 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
-from fuzzy import fuzzy_diagnosis_enhanced, validate_input_data
+from fuzzy import fuzzy_diagnosis_enhanced
 from utils import (calculate_bmi, get_bmi_category, get_blood_pressure_category,
-                  get_risk_factors_summary, generate_recommendations, calculate_target_values)
+                  get_risk_factors_summary, generate_recommendations, calculate_target_values,
+                  validate_input_data)
 
 app = Flask(__name__)
 

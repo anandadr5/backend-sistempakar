@@ -173,3 +173,110 @@ def format_diagnosis_result(centroid_score):
             'risiko': "Risiko Sangat Tinggi",
             'saran': "🚨 DARURAT! Risiko sangat tinggi. Segera kunjungi IGD atau dokter spesialis jantung hari ini. Kondisi ini memerlukan penanganan medis segera."
         }
+    
+def get_risk_factors_summary(age, gender, bmi, sistolik, diastolik, riwayat_penyakit, riwayat_merokok, aspek_psikologis):
+    """Merangkum faktor-faktor risiko kardiovaskular berdasarkan input."""
+    factors = []
+    
+    # Faktor Usia dan Gender
+    if gender == 1 and age >= 45:
+        factors.append("Usia (Pria >= 45 tahun)")
+    if gender == 0 and age >= 55:
+        factors.append("Usia (Wanita >= 55 tahun)")
+
+    # Faktor BMI
+    if bmi >= 30:
+        factors.append("Obesitas (BMI >= 30)")
+    elif bmi >= 25:
+        factors.append("Berat badan berlebih (BMI 25-29.9)")
+
+    # Faktor Tekanan Darah
+    bp_category = get_blood_pressure_category(sistolik, diastolik)
+    if "Hipertensi" in bp_category or "Prehipertensi" in bp_category:
+        factors.append(f"Tekanan Darah ({bp_category})")
+
+    # Faktor Riwayat Penyakit
+    if riwayat_penyakit.lower() in ['ada', 'ya', '1']:
+        factors.append("Riwayat penyakit keluarga")
+
+    # Faktor Merokok
+    if riwayat_merokok.lower() in ['ya', 'iya', '1']:
+        factors.append("Merokok aktif")
+
+    # Faktor Psikologis
+    if aspek_psikologis.lower() not in ['tenang', 'normal']:
+        factors.append(f"Kondisi psikologis ({aspek_psikologis})")
+        
+    if not factors:
+        return ["Tidak ada faktor risiko utama yang teridentifikasi."]
+
+    return factors
+
+def validate_input_data(age, gender, bmi, sistolik, diastolik, symptoms, riwayat_penyakit, riwayat_merokok, aspek_psikologis):
+    """Memvalidasi data input untuk memastikan format dan rentang yang benar."""
+    errors = []
+    if not (0 < age < 120):
+        errors.append("Usia tidak valid.")
+    if not (0 < bmi < 60):
+        errors.append("BMI tidak realistis.")
+    if not (60 < sistolik < 250):
+        errors.append("Tekanan darah sistolik tidak valid.")
+    if not (40 < diastolik < 150):
+        errors.append("Tekanan darah diastolik tidak valid.")
+    if sistolik <= diastolik:
+        errors.append("Tekanan sistolik harus lebih tinggi dari diastolik.")
+    if not isinstance(symptoms, dict) or not symptoms:
+        errors.append("Format gejala tidak valid.")
+    return errors
+
+def generate_recommendations(age, gender, bmi, bp_category, risk_factors, risk_level):
+    """Menghasilkan rekomendasi kesehatan yang dipersonalisasi."""
+    recs = []
+
+    # Rekomendasi berdasarkan BMI
+    if bmi >= 30:
+        recs.append("Fokus pada penurunan berat badan melalui diet seimbang dan peningkatan aktivitas fisik.")
+    elif bmi >= 25:
+        recs.append("Lakukan olahraga kardio (seperti jalan cepat, jogging, atau bersepeda) minimal 150 menit per minggu.")
+
+    # Rekomendasi berdasarkan Tekanan Darah
+    if "Hipertensi" in bp_category:
+        recs.append("Kurangi asupan garam (natrium) secara signifikan dan pantau tekanan darah secara rutin.")
+    elif "Prehipertensi" in bp_category:
+        recs.append("Terapkan diet DASH (Dietary Approaches to Stop Hypertension) yang kaya buah, sayur, dan rendah lemak.")
+
+    # Rekomendasi berdasarkan Faktor Risiko Lain
+    if "Merokok aktif" in risk_factors:
+        recs.append("Sangat disarankan untuk berhenti merokok. Cari bantuan profesional jika perlu.")
+    if any("psikologis" in factor for factor in risk_factors):
+        recs.append("Kelola stres dengan teknik relaksasi seperti meditasi, yoga, atau konseling.")
+
+    # Rekomendasi Umum
+    recs.append("Lakukan pemeriksaan kesehatan (check-up) secara berkala dengan dokter Anda.")
+    recs.append("Pastikan tidur yang cukup dan berkualitas setiap malam (7-8 jam).")
+
+    # Jika risiko sangat tinggi, berikan rekomendasi paling prioritas
+    if "Sangat Tinggi" in risk_level:
+        recs.insert(0, "SEGERA KONSULTASI DENGAN DOKTER. Rekomendasi ini tidak menggantikan saran medis profesional.")
+
+    return list(dict.fromkeys(recs)) # Hapus duplikat sambil menjaga urutan
+
+def calculate_target_values(age, gender, bmi, current_bp):
+    """Menghitung target kesehatan ideal untuk pengguna."""
+    targets = {}
+
+    # Target BMI dan Berat Badan
+    if bmi >= 25.0:
+        targets['target_bmi'] = "18.5 - 24.9 (Normal)"
+    elif bmi < 18.5:
+        targets['target_bmi'] = "18.5 - 24.9 (Normal)"
+    else:
+        targets['target_bmi'] = "Pertahankan di rentang 18.5 - 24.9"
+
+    # Target Tekanan Darah
+    normal_bp = get_normal_blood_pressure(age, gender)
+    targets['target_tekanan_darah'] = f"Sistolik: <{normal_bp['sistolik']+10} mmHg, Diastolik: <{normal_bp['diastolik']+10} mmHg"
+    
+    targets['saran_aktivitas'] = "Minimal 30 menit aktivitas fisik intensitas sedang, 5 hari seminggu."
+
+    return targets

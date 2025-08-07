@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from utils import gaussian_membership, get_active_symptoms, format_diagnosis_result, print_debug_info
+from utils import gaussian_membership, get_active_symptoms, format_diagnosis_result
 
 def normalize_symptom_keys(symptoms):
     return {
