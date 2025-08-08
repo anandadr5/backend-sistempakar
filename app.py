@@ -137,13 +137,15 @@ def diagnosis():
             print(f"✅ Basic data extracted: name={name}, age={age}, gender={gender_str}")
             
             # Data tambahan dengan default values
-            sistolik = float(data.get("sistolik", 120))
-            diastolik = float(data.get("diastolik", 80))
-            riwayat_penyakit = str(data.get("riwayat_penyakit", "Tidak Ada"))
-            riwayat_merokok = str(data.get("riwayat_merokok", "Tidak"))
-            aspek_psikologis = str(data.get("aspek_psikologis", "Tenang"))
+            sistolik = float(data["sistolik"])
+            diastolik = float(data["diastolik"])
+            riwayat_penyakit = str(data["riwayat_penyakit"])
+            riwayat_merokok = str(data["riwayat_merokok"])
+            aspek_psikologis = str(data["aspek_psikologis"])
             
             print(f"✅ Additional data: sistolik={sistolik}, diastolik={diastolik}")
+            print(f"✅ Riwayat: penyakit={riwayat_penyakit}, merokok={riwayat_merokok}")
+            print(f"✅ Psikologis: {aspek_psikologis}")
             
         except (ValueError, TypeError) as e:
             return jsonify({
@@ -285,11 +287,12 @@ def diagnosis():
             "gejala": gejala_aktif_display,
             "saran": saran,
             "risk_factors": risk_factors,
-            "recommendations": recommendations[:5],
+            "recommendations": recommendations[:5] if recommendations else [],
             "targets": targets
         }
 
         print("✅ Response prepared successfully")
+        print(f"🔍 Final response data: {response_data}")
         return jsonify(response_data)
     
     except ValueError as e:
