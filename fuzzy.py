@@ -1,5 +1,4 @@
 import numpy as np
-import math
 from utils import gaussian_membership, get_active_symptoms, format_diagnosis_result
 
 def normalize_symptom_keys(symptoms):
@@ -15,7 +14,7 @@ def convert_string_to_symptom_dict(gejala_str):
         if symptom.strip()
     }
 
-def fuzzifikasi_usia(age):
+def fuzzifikasi_usia(age, gender):
     # Fuzzifikasi usia
     if gender == 1:  # Laki-laki
         return {
