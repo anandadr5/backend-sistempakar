@@ -39,6 +39,10 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_dev_secret_key_
 
 db = SQLAlchemy(app)
 
+from flask_migrate import Migrate
+
+migrate = Migrate(app, db)
+
 # MODEL
 class Diagnosa(db.Model):
     __tablename__ = 'diagnosa'
