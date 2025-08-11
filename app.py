@@ -1,8 +1,4 @@
-from dotenv import load_dotenv
-load_dotenv()
-
 import os
-import traceback
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -10,17 +6,8 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
-try:
-    from fuzzy import fuzzy_diagnosis_enhanced
-    from utils import (calculate_bmi, get_bmi_category, get_blood_pressure_category,
-                      get_risk_factors_summary, generate_recommendations, calculate_target_values,
-                      validate_input_data)
-    print("✅ All imports successful")
-except ImportError as e:
-    print(f"❌ Import error: {e}")
-    # Create dummy functions for testing
-    def fuzzy_diagnosis_enhanced(*args, **kwargs):
-        return "Test Diagnosis", 50.0, "Risiko Sedang", "Test saran"
+from fuzzy import fuzzy_diagnosis
+from utils import calculate_bmi, get_bmi_category
 
 app = Flask(__name__)
 
@@ -48,13 +35,6 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_dev_secret_key_
 
 db = SQLAlchemy(app)
 
-try:
-    from flask_migrate import Migrate
-    migrate = Migrate(app, db)
-    print("✅ Flask-Migrate initialized")
-except ImportError:
-    print("⚠️  Flask-Migrate not available")
-
 # MODEL
 class Diagnosa(db.Model):
     __tablename__ = 'diagnosa'
@@ -67,27 +47,12 @@ class Diagnosa(db.Model):
     tinggi_badan = db.Column(db.Float, nullable=False)
     bmi = db.Column(db.Float, nullable=False)
     kategori_bmi = db.Column(db.String(20))
-    
-    # Data tekanan darah
-    sistolik = db.Column(db.Float, nullable=True)
-    diastolik = db.Column(db.Float, nullable=True)
-    kategori_tekanan_darah = db.Column(db.String(30))
-    
-    # Data tambahan
-    riwayat_penyakit = db.Column(db.String(20))
-    riwayat_merokok = db.Column(db.String(20))
-    aspek_psikologis = db.Column(db.String(50))
-    
-    # Hasil diagnosis
     diagnosis = db.Column(db.String(50))
     persentase = db.Column(db.Float)
     risiko = db.Column(db.String(50))
     saran = db.Column(db.Text)
     gejala = db.Column(db.Text)
-    
-    # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    risk_score = db.Column(db.Float)  # Skor risiko kardiovaskular
 
 class Feedback(db.Model):
     __tablename__ = 'feedback'
@@ -102,172 +67,50 @@ class Feedback(db.Model):
 @app.route("/api/diagnosis", methods=["POST"])
 def diagnosis():
     try:
-        print("🔍 Starting diagnosis endpoint...")
-
-        # Get JSON data
         data = request.get_json()
-        print(f"📥 Received data: {data}")
-        
+
         if not data:
             return jsonify({"error": "No data provided"}), 400
 
         # Validasi input
         required_fields = ["nama", "usia", "gender", "weight", "height", "gejala"]
-        missing_fields = []
-        
         for field in required_fields:
             if field not in data:
-                missing_fields.append(field)
-                if missing_fields:
-                    return jsonify({
-                "error": f"Missing required fields: {', '.join(missing_fields)}",
-                "required_fields": required_fields,
-                "received_fields": list(data.keys()) if data else []
-            }), 400
-
-        # Extract data dengan error handling
-        try:
-            name = str(data["nama"])
-            age = int(data["usia"])
-            gender_str = str(data["gender"])
-            weight = float(data["weight"])
-            height = float(data["height"])
-            symptoms = data["gejala"]
+                return jsonify({"error": f"Missing required field: {field}"}), 400
             
-            print(f"✅ Basic data extracted: name={name}, age={age}, gender={gender_str}")
-            
-            # Data tambahan dengan default values
-            sistolik = float(data["sistolik"])
-            diastolik = float(data["diastolik"])
-            riwayat_penyakit = str(data["riwayat_penyakit"])
-            riwayat_merokok = str(data["riwayat_merokok"])
-            aspek_psikologis = str(data["aspek_psikologis"])
-            
-            print(f"✅ Additional data: sistolik={sistolik}, diastolik={diastolik}")
-            print(f"✅ Riwayat: penyakit={riwayat_penyakit}, merokok={riwayat_merokok}")
-            print(f"✅ Psikologis: {aspek_psikologis}")
-            
-        except (ValueError, TypeError) as e:
-            return jsonify({
-                "error": f"Data type conversion error: {str(e)}",
-                "hint": "Check that numeric fields contain valid numbers"
-            }), 400
-
-        # Konversi gender ke format numerik
+        name = data["nama"]
+        age = int(data["usia"])
+        gender_str = data["gender"]
+        weight = float(data["weight"])
+        height = float(data["height"])
+        symptoms = data["gejala"]
         gender = 1 if gender_str.lower() == "laki-laki" else 0
-        print(f"✅ Gender converted: {gender_str} -> {gender}")
+        bmi = calculate_bmi(weight, height / 100)
+        kategori_bmi = get_bmi_category(bmi)
+        diagnosis_result, percentage, risiko, saran = fuzzy_diagnosis(age, gender, bmi, symptoms)
 
-        # Hitung BMI (height dalam meter)
-        try:
-            bmi = calculate_bmi(weight, height / 100)
-            kategori_bmi = get_bmi_category(bmi)
-            kategori_td = get_blood_pressure_category(sistolik, diastolik)
-            print(f"✅ Calculated: BMI={bmi}, BMI_cat={kategori_bmi}, BP_cat={kategori_td}")
-            
-        except Exception as e:
-            return jsonify({
-                "error": f"BMI/BP calculation error: {str(e)}",
-                "weight": weight, "height": height, "sistolik": sistolik, "diastolik": diastolik
-            }), 400
+        gejala_aktif = [key for key, val in symptoms.items() if val.lower() == "ya"]
+        gejala_aktif_display = ", ".join(gejala_aktif) if gejala_aktif else "Tidak ada gejala yang dipilih"
 
-        # Validasi data input
-        try:
-            validation_errors = validate_input_data(
-                age, gender, bmi, sistolik, diastolik, symptoms,
-                riwayat_penyakit, riwayat_merokok, aspek_psikologis
-            )
-            
-            if validation_errors:
-                return jsonify({
-                    "error": "Validation failed", 
-                    "details": validation_errors
-                }), 400
-                
-            print("✅ Input validation passed")
-            
-        except Exception as e:
-            print(f"⚠️  Validation error (continuing anyway): {str(e)}")
-
-        # Proses diagnosis menggunakan sistem fuzzy
-        try:
-            print("🧠 Starting fuzzy diagnosis...")
-            diagnosis_result, percentage, risiko, saran = fuzzy_diagnosis_enhanced(
-                age, gender, bmi, sistolik, diastolik, symptoms,
-                riwayat_penyakit, riwayat_merokok, aspek_psikologis
-            )
-            print(f"✅ Fuzzy diagnosis completed: {diagnosis_result}, {percentage}%, {risiko}")
-            
-        except Exception as e:
-            print(f"❌ Fuzzy diagnosis error: {str(e)}")
-            print(f"Traceback: {traceback.format_exc()}")
-            return jsonify({
-                "error": f"Diagnosis processing error: {str(e)}",
-                "traceback": traceback.format_exc() if app.debug else None
-            }), 500
-
-        # Hitung faktor risiko dan rekomendasi
-        try:
-            if isinstance(symptoms, dict):
-                gejala_aktif = [key for key, val in symptoms.items() if str(val).lower() == "ya"]
-            else:
-                gejala_aktif = []
-                
-            gejala_aktif_display = ", ".join(gejala_aktif) if gejala_aktif else "Tidak ada gejala yang dipilih"
-            
-            risk_factors = get_risk_factors_summary(
-                age, gender, bmi, sistolik, diastolik,
-                riwayat_penyakit, riwayat_merokok, aspek_psikologis
-            )
-            
-            recommendations = generate_recommendations(
-                age, gender, bmi, kategori_td, risk_factors, risiko
-            )
-            
-            targets = calculate_target_values(age, gender, bmi, {"sistolik": sistolik, "diastolik": diastolik})
-            
-            print("✅ Risk factors and recommendations calculated")
-            
-        except Exception as e:
-            print(f"⚠️  Risk calculation error (using defaults): {str(e)}")
-            gejala_aktif_display = "Error calculating symptoms"
-            risk_factors = ["Error calculating risk factors"]
-            recommendations = ["Konsultasi dengan dokter"]
-            targets = {"target_bmi": "18.5-24.9", "target_tekanan_darah": "Normal"}
-
-        # Simpan ke database
-        try:
-            diagnosa = Diagnosa(
-                nama=name,
-                usia=age,
-                jenis_kelamin=gender_str,
-                berat_badan=weight,
-                tinggi_badan=height,
-                bmi=bmi,
-                kategori_bmi=kategori_bmi,
-                sistolik=sistolik,
-                diastolik=diastolik,
-                kategori_tekanan_darah=kategori_td,
-                riwayat_penyakit=riwayat_penyakit,
-                riwayat_merokok=riwayat_merokok,
-                aspek_psikologis=aspek_psikologis,
-                diagnosis=diagnosis_result,
-                persentase=percentage,
-                risiko=risiko,
-                saran=saran,
-                gejala=gejala_aktif_display,
-                risk_score=percentage
+        diagnosa = Diagnosa(
+            nama=name,
+            usia=age,
+            jenis_kelamin=gender_str,
+            berat_badan=weight,
+            tinggi_badan=height,
+            bmi=bmi,
+            kategori_bmi=kategori_bmi,
+            diagnosis=diagnosis_result,
+            persentase=percentage,
+            risiko=risiko,
+            saran=saran,
+            gejala=gejala_aktif_display
             )
 
-            db.session.add(diagnosa)
-            db.session.commit()
-            print("✅ Data saved to database")
-            
-        except Exception as e:
-            print(f"⚠️  Database save error (continuing anyway): {str(e)}")
-            db.session.rollback()
+        db.session.add(diagnosa)
+        db.session.commit()
 
-        # Response
-        response_data = {
+        return jsonify({
             "nama": name,
             "usia": age,
             "gender": gender_str,
@@ -275,49 +118,15 @@ def diagnosis():
             "height": height,
             "bmi": bmi,
             "kategori_bmi": kategori_bmi,
-            "sistolik": sistolik,
-            "diastolik": diastolik,
-            "kategori_tekanan_darah": kategori_td,
-            "riwayat_penyakit": riwayat_penyakit,
-            "riwayat_merokok": riwayat_merokok,
-            "aspek_psikologis": aspek_psikologis,
             "diagnosis": diagnosis_result,
             "persentase": percentage,
             "risiko": risiko,
             "gejala": gejala_aktif_display,
-            "saran": saran,
-            "risk_factors": risk_factors,
-            "recommendations": recommendations[:5] if recommendations else [],
-            "targets": targets
-        }
-
-        print("✅ Response prepared successfully")
-        print(f"🔍 Final response data: {response_data}")
-        return jsonify(response_data)
+            "saran": saran
+        })
     
-    except ValueError as e:
-        error_msg = f"Invalid data format: {str(e)}"
-        print(f"❌ ValueError: {error_msg}")
-        return jsonify({"error": error_msg}), 400
-        
     except Exception as e:
-        error_msg = f"Unexpected error: {str(e)}"
-        print(f"❌ Exception: {error_msg}")
-        print(f"Traceback: {traceback.format_exc()}")
-        return jsonify({
-            "error": error_msg,
-            "traceback": traceback.format_exc() if app.debug else None
-        }), 500
-
-# Test endpoint untuk debugging
-@app.route("/api/test", methods=["GET", "POST"])
-def test():
-    return jsonify({
-        "status": "API is working",
-        "method": request.method,
-        "timestamp": datetime.utcnow().isoformat(),
-        "data": request.get_json() if request.method == "POST" else None
-    })
+        return jsonify({"error": str(e)}), 500
 
 # ENDPOINT STATISTIK HARIAN
 @app.route("/api/statistik-harian", methods=["GET"])
@@ -328,115 +137,43 @@ def statistik_harian():
 
         results = db.session.query(
             func.date(Diagnosa.created_at).label('tanggal'),
-            func.count(Diagnosa.id).label('total'),
-            func.sum(func.case([(Diagnosa.risiko.like('%Tinggi%'), 1)], else_=0)).label('risiko_tinggi'),
-            func.sum(func.case([(Diagnosa.risiko.like('%Sedang%'), 1)], else_=0)).label('risiko_sedang'),
-            func.sum(func.case([(Diagnosa.risiko.like('%Rendah%'), 1)], else_=0)).label('risiko_rendah')
-        ).filter(
+            func.count(Diagnosa.id)
+            ).filter(
             Diagnosa.created_at >= start_date
-        ).group_by(
+            ).group_by(
             func.date(Diagnosa.created_at)
         ).all()
 
         data = []
         for i in range(7):
             tanggal = start_date + timedelta(days=i)
-            stats = next((r for r in results if r.tanggal == tanggal), None)
-            
-            if stats:
-                data.append({
-                    "day": tanggal.strftime('%d-%m'),
-                    "diagnosis": stats.total,
-                    "risiko_tinggi": stats.risiko_tinggi or 0,
-                    "risiko_sedang": stats.risiko_sedang or 0,
-                    "risiko_rendah": stats.risiko_rendah or 0
-                })
-            else:
-                data.append({
-                    "day": tanggal.strftime('%d-%m'),
-                    "diagnosis": 0,
-                    "risiko_tinggi": 0,
-                    "risiko_sedang": 0,
-                    "risiko_rendah": 0
-                })
+            count = next((c for t, c in results if t == tanggal), 0)
+            data.append({
+                "day": tanggal.strftime('%d-%m'),
+                "diagnosis": count
+            })
 
         return jsonify(data)
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ENDPOINT STATISTIK RISIKO
-@app.route("/api/statistik-risiko", methods=["GET"])
-def statistik_risiko():
-    try:
-        # Statistik berdasarkan kategori risiko
-        risiko_stats = db.session.query(
-            Diagnosa.risiko,
-            func.count(Diagnosa.id).label('count')
-        ).group_by(Diagnosa.risiko).all()
-        
-        # Statistik berdasarkan usia
-        usia_stats = db.session.query(
-            func.case([
-                (Diagnosa.usia < 30, 'Muda'),
-                (Diagnosa.usia < 50, 'Dewasa'),
-                (Diagnosa.usia < 70, 'Setengah Baya'),
-                (Diagnosa.usia >= 70, 'Lansia')
-            ]).label('kategori_usia'),
-            func.avg(Diagnosa.persentase).label('avg_risk_score'),
-            func.count(Diagnosa.id).label('count')
-        ).group_by('kategori_usia').all()
-        
-        # Statistik berdasarkan jenis kelamin
-        gender_stats = db.session.query(
-            Diagnosa.jenis_kelamin,
-            func.avg(Diagnosa.persentase).label('avg_risk_score'),
-            func.count(Diagnosa.id).label('count')
-        ).group_by(Diagnosa.jenis_kelamin).all()
-
-        return jsonify({
-            "risiko_distribution": [{"kategori": r.risiko, "count": r.count} for r in risiko_stats],
-            "usia_analysis": [{"kategori": r.kategori_usia, "avg_score": float(r.avg_risk_score or 0), "count": r.count} for r in usia_stats],
-            "gender_analysis": [{"gender": r.jenis_kelamin, "avg_score": float(r.avg_risk_score or 0), "count": r.count} for r in gender_stats]
-        })
-    
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
 # DATA MASYARAKAT (DIAGNOSIS)
 @app.route("/api/data-masyarakat", methods=["GET"])
 def get_all_diagnosis():
     try:
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 20, type=int)
-        
-        pagination = Diagnosa.query.order_by(Diagnosa.id.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
-        
-        result = {
-            "data": [{
+        data = Diagnosa.query.order_by(Diagnosa.id.desc()).all()
+        result = [
+            {
                 "id": d.id,
                 "nama": d.nama,
                 "usia": d.usia,
                 "jenis_kelamin": d.jenis_kelamin,
-                "diagnosis": d.diagnosis,
-                "risiko": d.risiko,
-                "persentase": d.persentase,
-                "created_at": d.created_at.strftime('%Y-%m-%d %H:%M:%S')
-            } for d in pagination.items],
-            "pagination": {
-                "page": page,
-                "pages": pagination.pages,
-                "per_page": per_page,
-                "total": pagination.total,
-                "has_next": pagination.has_next,
-                "has_prev": pagination.has_prev
-            }
-        }
-        
+                "diagnosis": d.diagnosis
+            } for d in data
+        ]
         return jsonify(result)
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -454,23 +191,15 @@ def get_diagnosis_detail(id):
                 "tinggi_badan": data.tinggi_badan,
                 "bmi": data.bmi,
                 "kategori_bmi": data.kategori_bmi,
-                "sistolik": data.sistolik,
-                "diastolik": data.diastolik,
-                "kategori_tekanan_darah": data.kategori_tekanan_darah,
-                "riwayat_penyakit": data.riwayat_penyakit,
-                "riwayat_merokok": data.riwayat_merokok,
-                "aspek_psikologis": data.aspek_psikologis,
                 "diagnosis": data.diagnosis,
                 "persentase": data.persentase,
                 "risiko": data.risiko,
                 "saran": data.saran,
-                "gejala": data.gejala,
-                "risk_score": data.risk_score,
-                "created_at": data.created_at.strftime('%Y-%m-%d %H:%M:%S')
-            }
+                "gejala": data.gejala
+                }
             return jsonify(result)
         return jsonify({"message": "Data tidak ditemukan"}), 404
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -481,9 +210,9 @@ def delete_data(id):
         if data:
             db.session.delete(data)
             db.session.commit()
-            return jsonify({"message": "Data berhasil dihapus"})
+            return jsonify({"message": "Berhasil dihapus"})
         return jsonify({"message": "Data tidak ditemukan"}), 404
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -492,6 +221,7 @@ def delete_data(id):
 def create_feedback():
     try:
         data = request.get_json()
+        print("✅ DITERIMA:", data)
 
         if not data:
             return jsonify({"error": "No data provided"}), 400
@@ -513,10 +243,11 @@ def create_feedback():
 def get_feedback():
     try:
         feedbacks = Feedback.query.order_by(Feedback.id.desc()).all()
-        result = [{"id": f.id, "nama": f.nama, "email": f.email, "pesan": f.pesan, "created_at": f.created_at.strftime('%Y-%m-%d %H:%M:%S')} for f in feedbacks]
+        result = [{"id": f.id, "nama": f.nama, "email": f.email, "pesan": f.pesan} for f in feedbacks]
         return jsonify(result)
     
     except Exception as e:
+        print("❌ ERROR:", str(e))
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/feedback/<int:id>", methods=["DELETE"])
@@ -532,17 +263,6 @@ def delete_feedback(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Health check endpoint
-@app.route("/api/health", methods=["GET"])
-def health_check():
-    return jsonify({
-        "status": "healthy",
-        "version": "2.0",
-        "features": ["enhanced_fuzzy", "blood_pressure", "risk_factors", "recommendations"],
-        "timestamp": datetime.utcnow().isoformat(),
-        "debug": app.debug
-    })
-
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
@@ -550,19 +270,19 @@ def not_found(error):
 
 @app.errorhandler(500)
 def internal_error(error):
-    return jsonify({"error": "Internal server error", "details": str(error)}), 500
+    return jsonify({"error": "Internal server error"}), 500
 
 # Inisialisasi Database
 def init_db():
     try:
         with app.app_context():
             db.create_all()
-            print("✅ Database tables created successfully")
-            print("✅ Enhanced cardiovascular diagnosis system ready")
-    except Exception as e:
-        print(f"❌ Error creating database tables: {e}")
+            print("Database tables created successfully")
 
-# Inisialisasi database saat aplikasi dimulai
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
+
+# Inisialisasi database saat aplikasi dimuat
 init_db()
 
 # RUN APP
