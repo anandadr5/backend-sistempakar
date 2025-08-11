@@ -85,7 +85,7 @@ def diagnosis():
         height = float(data["height"])
         symptoms = data["gejala"]
         gender = 1 if gender_str.lower() == "laki-laki" else 0
-        bmi = calculate_bmi(weight, height / 100)
+        bmi = calculate_bmi(weight, height)
         kategori_bmi = get_bmi_category(bmi)
         diagnosis_result, percentage, risiko, saran = fuzzy_diagnosis(age, gender, bmi, symptoms)
 
