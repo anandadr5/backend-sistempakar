@@ -1,17 +1,10 @@
 import numpy as np
-from utils import gaussian_membership, get_active_symptoms, format_diagnosis_result, print_debug_info
+from utils import gaussian_membership, get_skor_tekanan_darah, format_diagnosis_result
 
 def normalize_symptom_keys(symptoms):
     return {
         key.lower().replace(" ", "_"): value.lower()
         for key, value in symptoms.items()
-    }
-
-def convert_string_to_symptom_dict(gejala_str):
-    return {
-        symptom.strip(): "ya"
-        for symptom in gejala_str.split(",")
-        if symptom.strip()
     }
 
 def fuzzifikasi_usia(age):
@@ -33,6 +26,23 @@ def fuzzifikasi_bmi(bmi):
         'obese': gaussian_membership(bmi, mean=35, std=5)
     }
 
+def fuzzifikasi_tekanan_darah(skor_td):
+    """Fuzzifikasi skor tekanan darah."""
+    return {
+        'rendah': gaussian_membership(skor_td, mean=-20, std=10),
+        'normal': gaussian_membership(skor_td, mean=0, std=10),
+        'tinggi': gaussian_membership(skor_td, mean=25, std=15),
+        'sangat_tinggi': gaussian_membership(skor_td, mean=50, std=20)
+    }
+
+def fuzzifikasi_riwayat(riwayat_penyakit, riwayat_merokok, aspek_psikologis):
+    """Memberikan skor fuzzy berdasarkan faktor risiko riwayat."""
+    return {
+        'penyakit': 1.0 if riwayat_penyakit.lower() == 'ada' else 0.0,
+        'merokok': 1.0 if riwayat_merokok.lower() == 'ya' else 0.0,
+        'psikologis_berat': 1.0 if aspek_psikologis.lower() in ['depresi', 'cemas', 'kecenderungan bunuh diri', 'takut', 'marah'] else 0.0,
+    }
+
 #Bobot gejala
 GEJALA_WEIGHTS = {
     'nyeri_dada': 1.0,
@@ -46,185 +56,89 @@ GEJALA_WEIGHTS = {
 }
 
 def fuzzifikasi_gejala(symptoms):
-    # Fuzzifikasi gejala
-    # Jika input berupa string, ubah ke dictionary
-    if isinstance(symptoms, str):
-        symptoms = convert_string_to_symptom_dict(symptoms)
-
-    # Normalisasi key
     symptoms = normalize_symptom_keys(symptoms)
-
-    print(f"🔍 DEBUG - Normalized symptoms input: {symptoms}")
-
-    base_fuzzy = {
-        'nyeri_dada': 1.0 if symptoms.get("nyeri_dada", "tidak") == "ya" else 0.0,
-        'sesak_napas': 1.0 if symptoms.get("sesak_napas", "tidak") == "ya" else 0.0,
-        'pusing': 1.0 if symptoms.get("pusing", "tidak") == "ya" else 0.0,
-        'lemas': 1.0 if symptoms.get("lemas", "tidak") == "ya" else 0.0,
-        'jantung_berdebar': 1.0 if symptoms.get("jantung_berdebar", "tidak") == "ya" else 0.0,
-        'mudah_lelah': 1.0 if symptoms.get("mudah_lelah", "tidak") == "ya" else 0.0,
-        'bengkak_kaki': 1.0 if symptoms.get("bengkak_kaki", "tidak") == "ya" else 0.0,
-        'keringat_dingin': 1.0 if symptoms.get("keringat_dingin", "tidak") == "ya" else 0.0
-    }
-
-    print(f"🔍 DEBUG - base_fuzzy result: {base_fuzzy}")
-    print(f"🔍 DEBUG - jumlah gejala aktif: {sum(1 for v in base_fuzzy.values() if v > 0)}")
-
+    base_fuzzy = {key: 1.0 if symptoms.get(key, "tidak") == "ya" else 0.0 for key in GEJALA_WEIGHTS}
     fuzzy_weighted = {key: base_fuzzy[key] * GEJALA_WEIGHTS[key] for key in base_fuzzy}
     return fuzzy_weighted, base_fuzzy
 
-def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy, gejala_base):
-
-#Inferensi Mamdani
+def inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy, gejala_base, tekanan_darah_fuzzy, riwayat_fuzzy):
     rules = []
-    total_gejala = sum(gejala_fuzzy.values())
-    gejala_berat = max(
-        gejala_fuzzy['nyeri_dada'],
-        gejala_fuzzy['sesak_napas'],
-        gejala_fuzzy['jantung_berdebar'],
-        gejala_fuzzy['keringat_dingin']
-    )
-    jumlah_gejala_aktif = sum(1 for value in gejala_base.values() if value > 0)
-
-    # DEBUG: Print untuk checking
-    print(f"DEBUG - gejala_base: {gejala_base}")
-    print(f"DEBUG - jumlah_gejala_aktif: {jumlah_gejala_aktif}")
-    print(f"DEBUG - total_gejala: {total_gejala}")
-
-    # Rule 13: Jika 7-8 gejala aktif → Risiko Tinggi
-    if jumlah_gejala_aktif >= 7:
-        print("DEBUG - Rule 13 TERPICU!")
-        return [('tinggi', 1.0)]
-
-    # Tidak ada gejala sama sekali
-    if jumlah_gejala_aktif == 0:
-        return [('tidak_terdeteksi', 1.0)]
-    
-    # Rule 1: Lansia + nyeri dada → Risiko Tinggi
-    rule1 = min(age_fuzzy['lansia'], gejala_fuzzy['nyeri_dada'])
-    if rule1 > 0.1: rules.append(('tinggi', rule1))
-
-    # Rule 2: Nyeri dada + keringat dingin + sesak napas → Risiko Tinggi
-    rule2 = min(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['keringat_dingin'], gejala_fuzzy['sesak_napas'])
-    if rule2 > 0.1: rules.append(('tinggi', rule2))
-
-    # Rule 3: Obesitas + bengkak kaki + mudah lelah → Risiko Sedang
-    rule3 = min(bmi_fuzzy['obese'], gejala_fuzzy['bengkak_kaki'], gejala_fuzzy['mudah_lelah'])
-    if rule3 > 0.1: rules.append(('sedang', rule3))
-
-    # Rule 4: Nyeri dada + jantung berdebar + sesak napas → Risiko Tinggi
-    rule4 = min(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['jantung_berdebar'], gejala_fuzzy['sesak_napas'])
-    if rule4 > 0.1: rules.append(('tinggi', rule4))
-
-    # Rule 5: Bayi/anak + keringat dingin + sesak napas → Risiko Tinggi
-    usia_kecil = max(age_fuzzy['bayi'], age_fuzzy['anak'])
-    rule5 = min(usia_kecil, gejala_fuzzy['keringat_dingin'], gejala_fuzzy['sesak_napas'])
-    if rule5 > 0.1: rules.append(('tinggi', rule5))
-
-    # Rule 6: Dewasa + overweight/obese + mudah lelah → Risiko Sedang
-    rule6 = min(age_fuzzy['dewasa'], max(bmi_fuzzy['overweight'], bmi_fuzzy['obese']), gejala_fuzzy['mudah_lelah'])
-    if rule6 > 0.1: rules.append(('sedang', rule6))
-
-    # Rule 7: Nyeri dada ringan + jantung berdebar tanpa keringat dingin → Risiko Sedang
-    rule7 = min(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['jantung_berdebar'], 1 - gejala_fuzzy['keringat_dingin'])
-    if rule7 > 0.1: rules.append(('sedang', rule7))
-
-    # Rule 8: Sesak napas + mudah lelah + BMI tinggi → Risiko Sedang
-    rule8 = min(gejala_fuzzy['sesak_napas'], gejala_fuzzy['mudah_lelah'], max(bmi_fuzzy['overweight'], bmi_fuzzy['obese']))
-    if rule8 > 0.1: rules.append(('sedang', rule8))
-
-    # Rule 9: ≥4 gejala aktif tanpa nyeri dada → Risiko Sedang
-    if total_gejala >= 4 and gejala_fuzzy['nyeri_dada'] == 0:
-        rule9 = min(0.9, total_gejala / 8)
-        rules.append(('sedang', rule9))
-
-    # Rule 10: Usia remaja/dewasa + BMI normal + gejala ringan → Risiko Rendah
+    gejala_berat = max(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['sesak_napas'])
     gejala_ringan = max(gejala_fuzzy['lemas'], gejala_fuzzy['pusing'], gejala_fuzzy['mudah_lelah'])
-    rule10 = min(max(age_fuzzy['remaja'], age_fuzzy['dewasa']), bmi_fuzzy['normal'], gejala_ringan)
-    if rule10 > 0.1 and gejala_berat == 0:
-        rules.append(('rendah', rule10))
+    jumlah_gejala_aktif = sum(gejala_base.values())
 
-    # Rule 11: 2–3 gejala ringan tanpa gejala berat → Risiko Rendah
-    if 2 <= total_gejala <= 3 and gejala_berat == 0:
-        rule11 = min(0.7, total_gejala / 8)
-        rules.append(('rendah', rule11))
+    # --- Aturan Prioritas (Riwayat & Tekanan Darah Darurat) ---
+    if riwayat_fuzzy['penyakit'] and (gejala_berat > 0 or tekanan_darah_fuzzy['tinggi'] > 0.5):
+        rules.append(('tinggi', 1.0))
+    if tekanan_darah_fuzzy['sangat_tinggi'] > 0.5:
+        rules.append(('tinggi', tekanan_darah_fuzzy['sangat_tinggi']))
 
-    # Rule 12: Nyeri dada tunggal pada usia muda dan BMI normal → Risiko Rendah
-    if gejala_fuzzy['nyeri_dada'] > 0 and total_gejala == 1:
-        usia_muda = max(age_fuzzy['remaja'], age_fuzzy['dewasa'])
-        rule12 = min(usia_muda, bmi_fuzzy['normal'], gejala_fuzzy['nyeri_dada'])
-        if rule12 > 0.1:
-            rules.append(('rendah', rule12))
+    # --- Aturan Risiko Tinggi ---
+    if min(gejala_fuzzy['nyeri_dada'], gejala_fuzzy['sesak_napas'], gejala_fuzzy['keringat_dingin']) > 0:
+        rules.append(('tinggi', 0.95))
+    if age_fuzzy['lansia'] > 0.5 and gejala_berat > 0:
+        rules.append(('tinggi', age_fuzzy['lansia'] * 0.9))
 
-    # Kriteria "tidak terdeteksi" untuk gejala ringan + usia normal + BMI normal/overweight
-    if len(rules) == 0:
-        gejala_ringan_only = (
-            gejala_berat == 0 and
-            max(gejala_fuzzy['lemas'], gejala_fuzzy['pusing'], gejala_fuzzy['mudah_lelah']) > 0 and
-            max(age_fuzzy['remaja'], age_fuzzy['dewasa']) > 0 and
-            max(bmi_fuzzy['normal'], bmi_fuzzy['overweight']) > 0
-        )
-        if gejala_ringan_only:
+    # --- Aturan Risiko Sedang ---
+    if riwayat_fuzzy['merokok'] and bmi_fuzzy['overweight'] and tekanan_darah_fuzzy['tinggi']:
+        rules.append(('sedang', 0.85))
+    if riwayat_fuzzy['psikologis_berat'] and gejala_fuzzy['jantung_berdebar']:
+        rules.append(('sedang', 0.8))
+    if bmi_fuzzy['obese'] and (gejala_fuzzy['bengkak_kaki'] or gejala_fuzzy['sesak_napas']):
+        rules.append(('sedang', 0.75))
+    if jumlah_gejala_aktif >= 4 and gejala_berat > 0:
+        rules.append(('sedang', 0.7))
+
+    # --- Aturan Risiko Rendah ---
+    if 1 <= jumlah_gejala_aktif <= 3 and gejala_berat == 0 and not any(riwayat_fuzzy.values()):
+        rules.append(('rendah', 0.6))
+    if gejala_ringan > 0 and gejala_berat == 0 and bmi_fuzzy['normal'] > 0.5:
+        rules.append(('rendah', 0.5))
+
+    # Fallback
+    if not rules:
+        if jumlah_gejala_aktif == 0:
             rules.append(('tidak_terdeteksi', 1.0))
         else:
-            rules.append(('tidak_terdeteksi', 1.0))  # fallback
-
+            rules.append(('rendah', 0.3))
+            
     return rules
 
 
 def agregasi_output(rules):
-    # Agregasi output
-    aggregated = {'rendah': 0, 'sedang': 0, 'tinggi': 0}
+    aggregated = {'rendah': 0, 'sedang': 0, 'tinggi': 0, 'tidak_terdeteksi': 0}
     for kategori, strength in rules:
-        aggregated[kategori] = max(aggregated[kategori], strength)
+        if kategori in aggregated:
+            aggregated[kategori] = max(aggregated[kategori], strength)
     return aggregated
 
 def defuzzifikasi_centroid(aggregated):
-    # Defuzzifikasi centroid
-    risiko_params = {
-        'rendah': {'mean': 25, 'std': 15},
-        'sedang': {'mean': 50, 'std': 15},
-        'tinggi': {'mean': 75, 'std': 15}
-    }
-
+    if aggregated.get('tidak_terdeteksi') == 1.0: return 0
+    risiko_params = {'rendah': {'mean': 25, 'std': 15}, 'sedang': {'mean': 55, 'std': 15}, 'tinggi': {'mean': 85, 'std': 10}}
     x_range = np.arange(0, 101, 1)
     output_membership = np.zeros_like(x_range, dtype=float)
-
     for kategori, strength in aggregated.items():
-        if strength > 0:
-            kategori_membership = np.array([
-                gaussian_membership(x, **risiko_params[kategori]) for x in x_range
-            ])
+        if kategori in risiko_params and strength > 0:
+            kategori_membership = np.array([gaussian_membership(x, **risiko_params[kategori]) for x in x_range])
             clipped = np.minimum(kategori_membership, strength)
             output_membership = np.maximum(output_membership, clipped)
+    if np.sum(output_membership) == 0: return 0
+    return np.sum(x_range * output_membership) / np.sum(output_membership)
 
-    if np.sum(output_membership) == 0:
-        return 0
-
-    numerator = np.sum(x_range * output_membership)
-    denominator = np.sum(output_membership)
-    return numerator / denominator
-
-
-def fuzzy_diagnosis(age, gender, bmi, symptoms):
-    # Fuzzifikasi
-    age = int(age)
-    bmi = float(bmi)
-
+def fuzzy_diagnosis(age, gender, bmi, sistolik, diastolik, riwayat_penyakit, riwayat_merokok, aspek_psikologis, symptoms):
+    skor_td = get_skor_tekanan_darah(sistolik, diastolik, age, gender)
+    
     age_fuzzy = fuzzifikasi_usia(age)
     bmi_fuzzy = fuzzifikasi_bmi(bmi)
     gejala_fuzzy, gejala_base = fuzzifikasi_gejala(symptoms)
+    tekanan_darah_fuzzy = fuzzifikasi_tekanan_darah(skor_td)
+    riwayat_fuzzy = fuzzifikasi_riwayat(riwayat_penyakit, riwayat_merokok, aspek_psikologis)
 
-    # Inferensi
-    rules_output = inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy, gejala_base)
-
-    # Agregasi
+    rules_output = inference_mamdani(age_fuzzy, bmi_fuzzy, gejala_fuzzy, gejala_base, tekanan_darah_fuzzy, riwayat_fuzzy)
+    
     aggregated = agregasi_output(rules_output)
-
-    # Defuzzifikasi
     centroid_score = defuzzifikasi_centroid(aggregated)
-
-    # Format hasil
+    
     result = format_diagnosis_result(centroid_score)
     result_score = round(centroid_score, 2)
 

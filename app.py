@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func
 
 from fuzzy import fuzzy_diagnosis
-from utils import calculate_bmi, get_bmi_category
+from utils import calculate_bmi, get_bmi_category, klasifikasi_tekanan_darah
 
 app = Flask(__name__)
 
@@ -46,8 +46,14 @@ class Diagnosa(db.Model):
     berat_badan = db.Column(db.Float, nullable=False)
     tinggi_badan = db.Column(db.Float, nullable=False)
     bmi = db.Column(db.Float, nullable=False)
-    kategori_bmi = db.Column(db.String(20))
-    diagnosis = db.Column(db.String(50))
+    kategori_bmi = db.Column(db.String(50))
+    sistolik = db.Column(db.Integer)
+    diastolik = db.Column(db.Integer)
+    kategori_tekanan_darah = db.Column(db.String(50))
+    riwayat_penyakit = db.Column(db.String(50))
+    riwayat_merokok = db.Column(db.String(50))
+    aspek_psikologis = db.Column(db.String(100))
+    diagnosis = db.Column(db.String(100))
     persentase = db.Column(db.Float)
     risiko = db.Column(db.String(50))
     saran = db.Column(db.Text)
@@ -73,59 +79,61 @@ def diagnosis():
             return jsonify({"error": "No data provided"}), 400
 
         # Validasi input
-        required_fields = ["nama", "usia", "gender", "weight", "height", "gejala"]
+        required_fields = [
+            "nama", "usia", "gender", "weight", "height", 
+            "sistolik", "diastolik", "riwayatPenyakit", 
+            "riwayatMerokok", "aspekPsikologis", "gejala"
+        ]
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
             
-        name = data["nama"]
+        # Ekstrak semua data
         age = int(data["usia"])
         gender_str = data["gender"]
         weight = float(data["weight"])
         height = float(data["height"])
+        sistolik = int(data["sistolik"])
+        diastolik = int(data["diastolik"])
+        riwayat_penyakit = data["riwayatPenyakit"]
+        riwayat_merokok = data["riwayatMerokok"]
+        aspek_psikologis = data["aspekPsikologis"]
         symptoms = data["gejala"]
-        gender = 1 if gender_str.lower() == "laki-laki" else 0
+
+        # Proses data
         bmi = calculate_bmi(weight, height)
         kategori_bmi = get_bmi_category(bmi)
-        diagnosis_result, percentage, risiko, saran = fuzzy_diagnosis(age, gender, bmi, symptoms)
+        kategori_tekanan_darah = klasifikasi_tekanan_darah(sistolik, diastolik)
+        
+        diagnosis_result, percentage, risiko, saran = fuzzy_diagnosis(
+            age, gender_str, bmi, sistolik, diastolik, 
+            riwayat_penyakit, riwayat_merokok, aspek_psikologis, symptoms
+        )
 
-        gejala_aktif = [key for key, val in symptoms.items() if val.lower() == "ya"]
-        gejala_aktif_display = ", ".join(gejala_aktif) if gejala_aktif else "Tidak ada gejala yang dipilih"
-
-        diagnosa = Diagnosa(
-            nama=name,
-            usia=age,
-            jenis_kelamin=gender_str,
-            berat_badan=weight,
-            tinggi_badan=height,
-            bmi=bmi,
-            kategori_bmi=kategori_bmi,
-            diagnosis=diagnosis_result,
-            persentase=percentage,
-            risiko=risiko,
-            saran=saran,
-            gejala=gejala_aktif_display
-            )
-
-        db.session.add(diagnosa)
+        # Simpan ke database
+        new_diagnosis = Diagnosa(
+            nama=data["nama"], usia=age, jenis_kelamin=gender_str,
+            berat_badan=weight, tinggi_badan=height, bmi=bmi, kategori_bmi=kategori_bmi,
+            sistolik=sistolik, diastolik=diastolik, kategori_tekanan_darah=kategori_tekanan_darah,
+            riwayat_penyakit=riwayat_penyakit, riwayat_merokok=riwayat_merokok, aspek_psikologis=aspek_psikologis,
+            diagnosis=diagnosis_result, persentase=percentage, risiko=risiko, saran=saran,
+            gejala=str(symptoms)
+        )
+        db.session.add(new_diagnosis)
         db.session.commit()
 
+        # Kirim response ke frontend
         return jsonify({
-            "nama": name,
-            "usia": age,
-            "gender": gender_str,
-            "weight": weight,
-            "height": height,
-            "bmi": bmi,
-            "kategori_bmi": kategori_bmi,
-            "diagnosis": diagnosis_result,
-            "persentase": percentage,
-            "risiko": risiko,
-            "gejala": gejala_aktif_display,
-            "saran": saran
+            "nama": data["nama"], "usia": age, "gender": gender_str,
+            "weight": weight, "height": height, "bmi": round(bmi, 2), "kategori_bmi": kategori_bmi,
+            "sistolik": sistolik, "diastolik": diastolik, "kategori_tekanan_darah": kategori_tekanan_darah,
+            "riwayatPenyakit": riwayat_penyakit, "riwayatMerokok": riwayat_merokok, "aspekPsikologis": aspek_psikologis,
+            "diagnosis": diagnosis_result, "persentase": percentage, "risiko": risiko,
+            "gejala": symptoms, "saran": saran
         })
     
     except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 # ENDPOINT STATISTIK HARIAN
