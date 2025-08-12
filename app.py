@@ -74,6 +74,7 @@ class Feedback(db.Model):
 def diagnosis():
     try:
         data = request.get_json()
+        print("🔍 DEBUG - Data diterima backend:", data)
 
         if not data:
             return jsonify({"error": "No data provided"}), 400
@@ -86,6 +87,7 @@ def diagnosis():
         ]
         for field in required_fields:
             if field not in data:
+                print(f"❌ Missing field: {field}")
                 return jsonify({"error": f"Missing required field: {field}"}), 400
             
         # Ekstrak semua data
@@ -100,6 +102,13 @@ def diagnosis():
         aspek_psikologis = data["aspekPsikologis"]
         symptoms = data["gejala"]
 
+        print(f"✅ Data berhasil diekstrak:")
+        print(f"   - Sistolik: {sistolik}")
+        print(f"   - Diastolik: {diastolik}")
+        print(f"   - Riwayat Penyakit: {riwayat_penyakit}")
+        print(f"   - Riwayat Merokok: {riwayat_merokok}")
+        print(f"   - Aspek Psikologis: {aspek_psikologis}")
+
         # Proses data
         bmi = calculate_bmi(weight, height)
         kategori_bmi = get_bmi_category(bmi)
@@ -110,30 +119,65 @@ def diagnosis():
             riwayat_penyakit, riwayat_merokok, aspek_psikologis, symptoms
         )
 
-        # Simpan ke database
         new_diagnosis = Diagnosa(
-            nama=data["nama"], usia=age, jenis_kelamin=gender_str,
-            berat_badan=weight, tinggi_badan=height, bmi=bmi, kategori_bmi=kategori_bmi,
-            sistolik=sistolik, diastolik=diastolik, kategori_tekanan_darah=kategori_tekanan_darah,
-            riwayat_penyakit=riwayat_penyakit, riwayat_merokok=riwayat_merokok, aspek_psikologis=aspek_psikologis,
-            diagnosis=diagnosis_result, persentase=percentage, risiko=risiko, saran=saran,
+            nama=data["nama"], 
+            usia=age, 
+            jenis_kelamin=gender_str,
+            berat_badan=weight, 
+            tinggi_badan=height, 
+            bmi=bmi, 
+            kategori_bmi=kategori_bmi,
+            sistolik=sistolik,
+            diastolik=diastolik,
+            kategori_tekanan_darah=kategori_tekanan_darah,
+            riwayat_penyakit=riwayat_penyakit,
+            riwayat_merokok=riwayat_merokok,
+            aspek_psikologis=aspek_psikologis,
+            diagnosis=diagnosis_result, 
+            persentase=percentage, 
+            risiko=risiko, 
+            saran=saran,
             gejala=str(symptoms)
         )
+        
+        print("💾 Data yang akan disimpan ke database:")
+        print(f"   - Sistolik: {new_diagnosis.sistolik}")
+        print(f"   - Diastolik: {new_diagnosis.diastolik}")
+        print(f"   - Riwayat Penyakit: {new_diagnosis.riwayat_penyakit}")
+        print(f"   - Riwayat Merokok: {new_diagnosis.riwayat_merokok}")
+        print(f"   - Aspek Psikologis: {new_diagnosis.aspek_psikologis}")
+        
         db.session.add(new_diagnosis)
         db.session.commit()
 
         # Kirim response ke frontend
-        return jsonify({
-            "nama": data["nama"], "usia": age, "gender": gender_str,
-            "weight": weight, "height": height, "bmi": round(bmi, 2), "kategori_bmi": kategori_bmi,
-            "sistolik": sistolik, "diastolik": diastolik, "kategori_tekanan_darah": kategori_tekanan_darah,
-            "riwayatPenyakit": riwayat_penyakit, "riwayatMerokok": riwayat_merokok, "aspekPsikologis": aspek_psikologis,
-            "diagnosis": diagnosis_result, "persentase": percentage, "risiko": risiko,
-            "gejala": symptoms, "saran": saran
-        })
+        response_data = {
+            "nama": data["nama"], 
+            "usia": age, 
+            "gender": gender_str,
+            "weight": weight, 
+            "height": height, 
+            "bmi": round(bmi, 2), 
+            "kategori_bmi": kategori_bmi,
+            "sistolik": sistolik, 
+            "diastolik": diastolik,
+            "kategori_tekanan_darah": kategori_tekanan_darah,
+            "riwayatPenyakit": riwayat_penyakit,
+            "riwayatMerokok": riwayat_merokok,
+            "aspekPsikologis": aspek_psikologis,
+            "diagnosis": diagnosis_result, 
+            "persentase": percentage, 
+            "risiko": risiko,
+            "gejala": symptoms, 
+            "saran": saran
+        }
+        
+        print("📤 Response yang dikirim ke frontend:", response_data)
+        return jsonify(response_data)
     
     except Exception as e:
         db.session.rollback()
+        print(f"❌ ERROR di backend: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # ENDPOINT STATISTIK HARIAN
@@ -199,6 +243,12 @@ def get_diagnosis_detail(id):
                 "tinggi_badan": data.tinggi_badan,
                 "bmi": data.bmi,
                 "kategori_bmi": data.kategori_bmi,
+                "sistolik": data.sistolik,
+                "diastolik": data.diastolik,
+                "kategori_tekanan_darah": data.kategori_tekanan_darah,
+                "riwayat_penyakit": data.riwayat_penyakit,
+                "riwayat_merokok": data.riwayat_merokok,
+                "aspek_psikologis": data.aspek_psikologis,
                 "diagnosis": data.diagnosis,
                 "persentase": data.persentase,
                 "risiko": data.risiko,
