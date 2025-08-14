@@ -106,6 +106,9 @@ def diagnosis():
         bmi = calculate_bmi(weight, height)
         kategori_bmi = get_bmi_category(bmi)
         kategori_tekanan_darah = klasifikasi_tekanan_darah(sistolik, diastolik)
+
+        print(f"🔍 DEBUG - Sistolik: {sistolik}, Diastolik: {diastolik}")
+        print(f"🔍 DEBUG - Kategori tekanan darah: {kategori_tekanan_darah}")
         
         diagnosis_result, percentage, risiko, saran = fuzzy_diagnosis(
             age, gender_str, bmi, sistolik, diastolik, 
@@ -135,9 +138,6 @@ def diagnosis():
         
         db.session.add(new_diagnosis)
         db.session.commit()
-
-        kategori_tekanan_darah = klasifikasi_tekanan_darah(sistolik, diastolik)
-        print(f"🔍 DEBUG - Kategori tekanan darah: {kategori_tekanan_darah}")
 
         # Kirim response ke frontend
         response_data = {
