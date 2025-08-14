@@ -74,19 +74,55 @@ def format_diagnosis_result(centroid_score):
         return {
             'diagnosis': "Tidak Terdeteksi",
             'risiko': "Sangat Rendah",
-            'saran': "🧘‍♂️ Kondisi Anda saat ini baik. Tetap jaga kesehatan dan pola hidup sehat ya! Jangan lupa olahraga rutin dan makan bergizi."
+            'saran': "🎉 Selamat! Jantung Anda dalam kondisi prima! Pertahankan gaya hidup sehat dengan:\n\n" +
+                    "✨ Olahraga teratur 30 menit/hari (jalan kaki, bersepeda, atau berenang)\n" +
+                    "🥗 Konsumsi makanan bergizi seimbang dengan banyak sayur dan buah\n" +
+                    "💤 Tidur berkualitas 7-8 jam per malam\n" +
+                    "🚭 Hindari rokok dan alkohol berlebihan\n" +
+                    "😌 Kelola stress dengan meditasi atau hobi yang Anda sukai\n\n" +
+                    "💡 Tip: Lakukan medical check-up rutin setiap tahun untuk menjaga kesehatan optimal!"
         }
     else:
         diagnosis = "Terdeteksi Potensi Masalah Jantung"
         if centroid_score < 40:
             risiko = "Risiko Rendah"
-            saran = "💡 Ada beberapa faktor risiko, namun masih terkendali. Tingkatkan gaya hidup sehat dan lakukan pemeriksaan rutin sebagai langkah pencegahan."
+            saran = "💡 Deteksi Dini: Ada beberapa indikator yang perlu diperhatikan, tapi jangan khawatir!\n\n" +\
+                   "🎯 Langkah-langkah pencegahan yang bisa dilakukan:\n" +\
+                   "🏃‍♂️ Mulai rutin berolahraga ringan 3x seminggu (jalan cepat 20-30 menit)\n" +\
+                   "🍎 Tingkatkan konsumsi omega-3 (ikan salmon, kacang-kacangan, alpukat)\n" +\
+                   "🧂 Kurangi asupan garam dan makanan olahan\n" +\
+                   "📊 Monitor tekanan darah dan kolesterol secara berkala\n" +\
+                   "🩺 Jadwalkan pemeriksaan jantung dalam 3-6 bulan ke depan\n\n" +\
+                   "💪 Ingat: Pencegahan adalah investasi terbaik untuk kesehatan jantung Anda!"
         elif centroid_score < 70:
             risiko = "Risiko Sedang"
-            saran = "⚠️ Sebaiknya konsultasikan dengan dokter untuk pemeriksaan lebih lanjut. Jangan menunda untuk mendapatkan evaluasi medis."
+            saran = "⚠️ Perhatian: Kondisi Anda memerlukan tindak lanjut medis segera!\n\n" +\
+                   "🚨 Yang harus dilakukan SEGERA:\n" +\
+                   "👨‍⚕️ Konsultasi dengan dokter spesialis jantung dalam 1-2 minggu\n" +\
+                   "🔍 Lakukan pemeriksaan EKG, Echo, atau stress test sesuai anjuran dokter\n" +\
+                   "💊 Patuhi pengobatan yang diresepkan dokter\n\n" +\
+                   "🎯 Perubahan gaya hidup yang WAJIB:\n" +\
+                   "🚫 STOP merokok sekarang juga (gunakan nicotine patch jika perlu)\n" +\
+                   "🥗 Diet jantung sehat: kurangi lemak jenuh, tingkatkan serat\n" +\
+                   "⚖️ Turunkan berat badan jika berlebih (target 0.5-1 kg/minggu)\n" +\
+                   "🧘‍♀️ Kelola stress dengan teknik relaksasi atau konseling\n\n" +\
+                   "💙 Jangan tunda! Kesehatan jantung adalah prioritas utama."
         else:
             risiko = "Risiko Tinggi"
-            saran = "🚨 Penting! Segera kunjungi fasilitas kesehatan terdekat untuk diagnosis dan penanganan yang tepat. Ikuti anjuran medis dengan serius."
+            saran = "🚨 URGENT - TINDAKAN SEGERA DIPERLUKAN! 🚨\n\n" +\
+                   "⛑️ Langkah DARURAT (dalam 24-48 jam):\n" +\
+                   "🏥 SEGERA kunjungi IGD atau dokter spesialis jantung\n" +\
+                   "📱 Simpan nomor emergency (118/119) di ponsel Anda\n" +\
+                   "👥 Beri tahu keluarga tentang kondisi Anda\n" +\
+                   "💼 Siapkan riwayat kesehatan lengkap untuk dokter\n\n" +\
+                   "⚡ Tindakan KRITIS yang harus dipatuhi:\n" +\
+                   "💊 Minum obat sesuai resep dokter dengan DISIPLIN\n" +\
+                   "🚫 BERHENTI total merokok dan alkohol\n" +\
+                   "🏃‍♂️ Batasi aktivitas fisik berat sampai ada izin dokter\n" +\
+                   "📊 Monitor tekanan darah dan nadi harian\n" +\
+                   "🍽️ Diet ketat rendah garam, rendah lemak\n\n" +\
+                   "❤️ REMEMBER: Kondisi ini bisa diatasi dengan penanganan yang tepat dan cepat!\n" +\
+                   "💪 Stay strong dan ikuti semua anjuran medis dengan serius!"
         return {
             'diagnosis': diagnosis,
             'risiko': risiko,
