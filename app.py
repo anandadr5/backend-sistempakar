@@ -102,13 +102,6 @@ def diagnosis():
         aspek_psikologis = data["aspekPsikologis"]
         symptoms = data["gejala"]
 
-        print(f"✅ Data berhasil diekstrak:")
-        print(f"   - Sistolik: {sistolik}")
-        print(f"   - Diastolik: {diastolik}")
-        print(f"   - Riwayat Penyakit: {riwayat_penyakit}")
-        print(f"   - Riwayat Merokok: {riwayat_merokok}")
-        print(f"   - Aspek Psikologis: {aspek_psikologis}")
-
         # Proses data
         bmi = calculate_bmi(weight, height)
         kategori_bmi = get_bmi_category(bmi)
@@ -140,15 +133,11 @@ def diagnosis():
             gejala=str(symptoms)
         )
         
-        print("💾 Data yang akan disimpan ke database:")
-        print(f"   - Sistolik: {new_diagnosis.sistolik}")
-        print(f"   - Diastolik: {new_diagnosis.diastolik}")
-        print(f"   - Riwayat Penyakit: {new_diagnosis.riwayat_penyakit}")
-        print(f"   - Riwayat Merokok: {new_diagnosis.riwayat_merokok}")
-        print(f"   - Aspek Psikologis: {new_diagnosis.aspek_psikologis}")
-        
         db.session.add(new_diagnosis)
         db.session.commit()
+
+        kategori_tekanan_darah = klasifikasi_tekanan_darah(sistolik, diastolik)
+        print(f"🔍 DEBUG - Kategori tekanan darah: {kategori_tekanan_darah}")
 
         # Kirim response ke frontend
         response_data = {
