@@ -74,55 +74,19 @@ def format_diagnosis_result(centroid_score):
         return {
             'diagnosis': "Tidak Terdeteksi",
             'risiko': "Sangat Rendah",
-            'saran': "🎉 Selamat! Jantung Anda dalam kondisi prima! Pertahankan gaya hidup sehat dengan:\n\n" +
-                    "✨ Olahraga teratur 30 menit/hari (jalan kaki, bersepeda, atau berenang)\n" +
-                    "🥗 Konsumsi makanan bergizi seimbang dengan banyak sayur dan buah\n" +
-                    "💤 Tidur berkualitas 7-8 jam per malam\n" +
-                    "🚭 Hindari rokok dan alkohol berlebihan\n" +
-                    "😌 Kelola stress dengan meditasi atau hobi yang Anda sukai\n\n" +
-                    "💡 Tip: Lakukan medical check-up rutin setiap tahun untuk menjaga kesehatan optimal!"
+            'saran': "🎉 Selamat! Kondisi jantung Anda prima! Pertahankan dengan olahraga teratur, makan bergizi seimbang, tidur cukup 7-8 jam, hindari rokok/alkohol, dan kelola stress dengan baik. Lakukan medical check-up rutin setiap tahun."
         }
     else:
         diagnosis = "Terdeteksi Potensi Masalah Jantung"
         if centroid_score < 40:
             risiko = "Risiko Rendah"
-            saran = "💡 Deteksi Dini: Ada beberapa indikator yang perlu diperhatikan, tapi jangan khawatir!\n\n" +\
-                   "🎯 Langkah-langkah pencegahan yang bisa dilakukan:\n" +\
-                   "🏃‍♂️ Mulai rutin berolahraga ringan 3x seminggu (jalan cepat 20-30 menit)\n" +\
-                   "🍎 Tingkatkan konsumsi omega-3 (ikan salmon, kacang-kacangan, alpukat)\n" +\
-                   "🧂 Kurangi asupan garam dan makanan olahan\n" +\
-                   "📊 Monitor tekanan darah dan kolesterol secara berkala\n" +\
-                   "🩺 Jadwalkan pemeriksaan jantung dalam 3-6 bulan ke depan\n\n" +\
-                   "💪 Ingat: Pencegahan adalah investasi terbaik untuk kesehatan jantung Anda!"
+            saran = "💡 Ada indikator yang perlu diperhatikan tapi masih terkendali. Mulai olahraga ringan 3x/minggu, konsumsi omega-3, kurangi garam, monitor tekanan darah berkala, dan jadwalkan pemeriksaan jantung dalam 3-6 bulan. Pencegahan adalah kunci!"
         elif centroid_score < 70:
             risiko = "Risiko Sedang"
-            saran = "⚠️ Perhatian: Kondisi Anda memerlukan tindak lanjut medis segera!\n\n" +\
-                   "🚨 Yang harus dilakukan SEGERA:\n" +\
-                   "👨‍⚕️ Konsultasi dengan dokter spesialis jantung dalam 1-2 minggu\n" +\
-                   "🔍 Lakukan pemeriksaan EKG, Echo, atau stress test sesuai anjuran dokter\n" +\
-                   "💊 Patuhi pengobatan yang diresepkan dokter\n\n" +\
-                   "🎯 Perubahan gaya hidup yang WAJIB:\n" +\
-                   "🚫 STOP merokok sekarang juga (gunakan nicotine patch jika perlu)\n" +\
-                   "🥗 Diet jantung sehat: kurangi lemak jenuh, tingkatkan serat\n" +\
-                   "⚖️ Turunkan berat badan jika berlebih (target 0.5-1 kg/minggu)\n" +\
-                   "🧘‍♀️ Kelola stress dengan teknik relaksasi atau konseling\n\n" +\
-                   "💙 Jangan tunda! Kesehatan jantung adalah prioritas utama."
+            saran = "⚠️ Kondisi memerlukan tindak lanjut segera! Konsultasi dokter spesialis jantung dalam 1-2 minggu, lakukan pemeriksaan EKG/Echo, patuhi pengobatan. STOP merokok, diet jantung sehat, turunkan berat badan, kelola stress. Jangan tunda!"
         else:
             risiko = "Risiko Tinggi"
-            saran = "🚨 URGENT - TINDAKAN SEGERA DIPERLUKAN! 🚨\n\n" +\
-                   "⛑️ Langkah DARURAT (dalam 24-48 jam):\n" +\
-                   "🏥 SEGERA kunjungi IGD atau dokter spesialis jantung\n" +\
-                   "📱 Simpan nomor emergency (118/119) di ponsel Anda\n" +\
-                   "👥 Beri tahu keluarga tentang kondisi Anda\n" +\
-                   "💼 Siapkan riwayat kesehatan lengkap untuk dokter\n\n" +\
-                   "⚡ Tindakan KRITIS yang harus dipatuhi:\n" +\
-                   "💊 Minum obat sesuai resep dokter dengan DISIPLIN\n" +\
-                   "🚫 BERHENTI total merokok dan alkohol\n" +\
-                   "🏃‍♂️ Batasi aktivitas fisik berat sampai ada izin dokter\n" +\
-                   "📊 Monitor tekanan darah dan nadi harian\n" +\
-                   "🍽️ Diet ketat rendah garam, rendah lemak\n\n" +\
-                   "❤️ REMEMBER: Kondisi ini bisa diatasi dengan penanganan yang tepat dan cepat!\n" +\
-                   "💪 Stay strong dan ikuti semua anjuran medis dengan serius!"
+            saran = "🚨 URGENT! SEGERA kunjungi IGD/dokter spesialis jantung dalam 24-48 jam. Simpan nomor emergency, beri tahu keluarga, siapkan riwayat kesehatan. Minum obat disiplin, berhenti total rokok/alkohol, batasi aktivitas berat, monitor tekanan darah harian."
         return {
             'diagnosis': diagnosis,
             'risiko': risiko,
